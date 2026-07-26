@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useWizard } from "../contexts/WizardContext";
-import { CheckCircle, Sparkles, X } from "lucide-react";
+import { Settings, Zap, Sparkles } from "lucide-react";
 
 export function Step7Infrastructure() {
   const { state } = useWizard();
@@ -177,7 +177,7 @@ function Step7InfraSelector({
   const isInCart = state.cartItems.some(i => i.optionId === optionId);
 
   return (
-    <div className={`relative bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 ${
+    <div id={`diy-item-${optionId}`} className={`scroll-m-24 relative bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 ${
       isRecommended 
         ? 'border-2 border-indigo-400 dark:border-indigo-600 bg-indigo-50/20 dark:bg-indigo-900/10 shadow-md ring-4 ring-indigo-500/10' 
         : 'border-2 border-slate-200 dark:border-slate-800/60 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700'
@@ -196,67 +196,57 @@ function Step7InfraSelector({
         </div>
         
         <div className="flex flex-col gap-2 shrink-0 w-full md:w-[280px]">
+          {/* DIY Button */}
           <button
             onClick={() => {
-              if (!isProvided) markClientProvided(optionId);
+              if (isProvided) {
+                removeClientProvided(optionId);
+              } else {
+                if (isInCart) removeCartItem(optionId);
+                markClientProvided(optionId);
+              }
             }}
             className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 ${
               isProvided 
-                ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10 shadow-sm cursor-default' 
-                : 'border-slate-200 dark:border-slate-800/50 hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer hover:-translate-x-1'
-            }`}
-          >
-            <div className="flex items-center gap-3 text-left">
-              <CheckCircle className={`w-5 h-5 shrink-0 transition-colors ${isProvided ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
-              <span className={`font-bold text-sm transition-colors ${isProvided ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                I already use a tool
-              </span>
-            </div>
-            <div className="flex items-center justify-end w-8 h-8 relative shrink-0 group">
-              <span className={`text-xs text-slate-500 font-medium transition-opacity absolute right-0 ${isProvided ? 'opacity-0 md:opacity-100 md:group-hover:opacity-0' : ''}`}>$0</span>
-              {isProvided && (
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeClientProvided(optionId);
-                  }}
-                  className="absolute opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md bg-red-50 hover:bg-red-100 text-red-500 transition-all cursor-pointer right-0"
-                >
-                  <X className="w-4 h-4" />
-                </div>
-              )}
-            </div>
-          </button>
-
-          <button
-            onClick={() => {
-              if (!isInCart) addCartItem({ allocatedHours: 0, paymentType: 'monthly', optionId, name, price, sla, category, purpose });
-            }}
-            className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 ${
-              isInCart 
-                ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm cursor-default' 
+                ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm' 
                 : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer hover:-translate-x-1'
             }`}
           >
             <div className="flex items-center gap-3 text-left">
-              <CheckCircle className={`w-5 h-5 shrink-0 transition-colors ${isInCart ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+              <Settings className={`w-5 h-5 shrink-0 transition-colors ${isProvided ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+              <span className={`font-bold text-sm transition-colors ${isProvided ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                I already use a tool
+              </span>
+            </div>
+            <div className="flex items-center justify-end w-8 h-8 relative shrink-0 group">
+              <span className={`text-xs text-slate-500 font-medium transition-opacity absolute right-0`}>$0</span>
+            </div>
+          </button>
+
+          {/* Service Button */}
+          <button
+            onClick={() => {
+              if (isInCart) {
+                removeCartItem(optionId);
+              } else {
+                if (isProvided) removeClientProvided(optionId);
+                addCartItem({ allocatedHours: 0, paymentType: 'monthly', optionId, name, price, sla, category, purpose });
+              }
+            }}
+            className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 ${
+              isInCart 
+                ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm' 
+                : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer hover:-translate-x-1'
+            }`}
+          >
+            <div className="flex items-center gap-3 text-left">
+              <Zap className={`w-5 h-5 shrink-0 transition-colors ${isInCart ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
               <span className={`font-bold text-sm transition-colors ${isInCart ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
                 Buy / Subscribe
               </span>
             </div>
             <div className="flex items-center justify-end w-16 h-8 relative shrink-0 group">
-              <span className={`text-xs font-mono font-semibold text-slate-500 transition-opacity absolute right-0 ${isInCart ? 'opacity-0 md:opacity-100 md:group-hover:opacity-0' : ''}`}>+${price.toLocaleString()}</span>
-              {isInCart && (
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeCartItem(optionId);
-                  }}
-                  className="absolute opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md bg-red-50 hover:bg-red-100 text-red-500 transition-all cursor-pointer right-0"
-                >
-                  <X className="w-4 h-4" />
-                </div>
-              )}
+              <span className={`text-xs font-mono font-semibold text-slate-500 transition-opacity absolute right-0`}>+${price.toLocaleString()}</span>
             </div>
           </button>
         </div>

@@ -3,7 +3,6 @@
 import React, { useMemo } from "react";
 import { useWizard, DIY_HOURS_MAP } from "../contexts/WizardContext";
 import { ChevronRight, ArrowRight } from "lucide-react";
-// Assuming isStepValid and getFirstIncompleteStageId will be in page.tsx or similar now
 import { isStepValid, getFirstIncompleteStageId } from "../app/[locale]/wizard/page";
 
 const STEP_NAMES: Record<number, string> = {
@@ -110,7 +109,7 @@ export function YourBuildSummary() {
       {/* ================= BLOCK 3: Navigation (Call to Action) ================= */}
       <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3 mt-auto">
         
-        {/* Кнопка НАЗАД (Скрыта на 1 шаге) */}
+        {/* Back Button */}
         {state.currentStep > 1 ? (
           <button
             onClick={prevStep}
@@ -119,32 +118,32 @@ export function YourBuildSummary() {
             Back
           </button>
         ) : (
-          // Пустой блок для сохранения верстки (чтобы Next Step оставалась справа)
           <div className="px-4 w-16"></div> 
         )}
 
-        {/* Кнопка ВПЕРЕД (Скрыта на 8 шаге) */}
+        {/* Next Button */}
         {state.currentStep < 8 && (() => {
-          const isStep2Incomplete = state.currentStep === 2 && getFirstIncompleteStageId(state) !== null;
+          const isNextDisabled = !isStepValid(state);
           
           const handleNextClick = (e: React.MouseEvent) => {
             e.preventDefault();
-            if (isStep2Incomplete) {
+            if (isNextDisabled) {
               const incompleteStageId = getFirstIncompleteStageId(state);
-              window.dispatchEvent(new CustomEvent('trigger-error-highlight', { detail: incompleteStageId }));
+              if (incompleteStageId) {
+                window.dispatchEvent(new CustomEvent('trigger-error-highlight', { detail: incompleteStageId }));
+              }
               return;
             }
-            if (isStepValid(state)) {
-              nextStep();
-            }
+            nextStep();
           };
 
           return (
             <button
               onClick={handleNextClick}
-              disabled={state.currentStep === 1 && !isStepValid(state)}
-              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg hover:shadow-indigo-600/20 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed ${
-                isStep2Incomplete ? 'opacity-60 grayscale-[50%] cursor-not-allowed hover:translate-y-0 hover:shadow-none' : ''
+              className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+                isNextDisabled 
+                  ? 'bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed hover:translate-y-0 hover:shadow-none' 
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:shadow-lg hover:shadow-indigo-600/20 hover:-translate-y-0.5 active:scale-95'
               }`}
             >
               {state.currentStep === 7 ? "Go to Summary" : "Next Step"}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export type CartItem = {
   optionId: string;
@@ -11,51 +11,53 @@ export type CartItem = {
   category?: 'hire' | 'service';
   purpose?: string;
   paymentType?: 'one-time' | 'monthly';
-  allocatedHours?: number; // <--- Добавили знак вопроса
+  allocatedHours?: number;
+};
+
+// 1. New Smart Alert Type
+export type SmartAlert = {
+  id: string;
+  message: string;
+  actionText: string;
+  targetStep: number;
+  targetElementId: string;
 };
 
 export type RuleEvaluationResults = {
   exclude: string[];
   forceRecommend: string[];
-  alerts: string[];
+  alerts: SmartAlert[]; 
 };
 
 export const DIY_HOURS_MAP: Record<string, number> = {
-  // Step 1
   'sales_methodology': 15,
   'competitor_intel': 25,
   'partner_mou': 20,
-  // Step 2
   'lead_gen': 40,
   'qualification': 80,
   'demo': 80,
   'negotiation': 30,
   'closed_won_lost': 20,
-  // Step 3
   'sales_deck': 25,
   'one_pager': 8,
   'objections_playbook': 15,
   'sales_playbook': 40,
   'battlecards': 20,
-  // Step 4
   'hiring_agreement': 10,
   'service_agreement': 15,
   'terms_of_service': 20,
   'gdpr_compliance': 30,
-  // Step 5
   'inbound_demo_funnel': 35,
   'micro_consulting': 35,
   'outbound_cold_meeting': 35,
   'automated_webinar': 35,
   'quick_callback': 35,
   'custom_funnel': 35,
-  // Step 6
   'byo_data': 20,
   'inbound_traffic': 40,
   'outbound_parsing': 20,
   'crm_enrichment': 15,
   'intent_data': 25,
-  // Step 7
   'sales_meeting_room': 4,
   'sales_team_chat': 5,
   'document_signing': 4,
@@ -105,6 +107,7 @@ type WizardContextType = {
   updateStep1Data: (data: Partial<Step1Data>) => void;
   updateStep5Data: (data: Partial<Step5Data>) => void;
   resetWizard: () => void;
+  restoreDraft: (draftData: WizardState) => void; 
 };
 
 const initialState: WizardState = {
@@ -134,29 +137,72 @@ const WizardContext = createContext<WizardContextType | undefined>(undefined);
 export const WizardProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<WizardState>(initialState);
   const router = useRouter();
+  const pathname = usePathname(); // <-- Добавлено для работы с URL
 
   useEffect(() => {
-    const evaluateRules = async () => {
-      try {
-        const response = await fetch('/api/wizard/evaluate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cartItems: state.cartItems,
-            clientProvidedItems: state.clientProvided
-          })
-        });
-        if (response.ok) {
-          const results = await response.json();
-          setState(prev => ({ ...prev, ruleResults: results }));
+    const evaluateRules = () => {
+      const alerts: SmartAlert[] = [];
+      const forceRecommend: string[] = [];
+      const exclude: string[] = [];
+
+      const hasData = 
+        state.cartItems.some(i => ['outbound_parsing', 'inbound_traffic', 'intent_data', 'crm_enrichment'].includes(i.optionId)) || 
+        state.clientProvided.includes('byo_data') || 
+        state.clientProvided.includes('lead_gen');
+
+      const hasSalesForce = 
+        state.cartItems.some(i => ['sdr', 'closer', 'ai_sdr', 'scout_hire'].includes(i.optionId)) || 
+        state.clientProvided.includes('qualification') || 
+        state.clientProvided.includes('demo');
+
+      const isArchitectureStarted = state.cartItems.length > 0 || state.clientProvided.length > 0 || state.step5Data.selectedFunnel !== '';
+
+      if (isArchitectureStarted) {
+        if (hasSalesForce && !hasData) {
+          alerts.push({
+            id: 'missing_data',
+            message: "You have assigned sales roles but haven't selected a lead generation source. Your team won't have anyone to call.",
+            actionText: "Select Lead Source \u2192",
+            targetStep: 6,
+            targetElementId: "diy-item-outbound_parsing"
+          });
+          forceRecommend.push('outbound_parsing');
         }
-      } catch (err) {
-        console.error("Rule evaluation failed", err);
+
+        if (hasData && !hasSalesForce) {
+          alerts.push({
+            id: 'missing_team',
+            message: "You are generating leads but have no one assigned to process them. Please hire an SDR/Closer or assign the role to yourself.",
+            actionText: "Hire Sales Force \u2192",
+            targetStep: 2,
+            targetElementId: "diy-item-qualification"
+          });
+          forceRecommend.push('sdr', 'closer');
+        }
+
+        if (state.step1Data.methodology === "I don't know" && !state.cartItems.some(i => i.optionId === 'sales_consulting')) {
+          alerts.push({
+            id: 'needs_consulting',
+            message: "Since you don't have a specific methodology yet, we strongly recommend purchasing Sales Consulting to build a solid foundation.",
+            actionText: "Add Consulting \u2192",
+            targetStep: 1,
+            targetElementId: "diy-item-sales_consulting"
+          });
+          forceRecommend.push('sales_consulting');
+        }
       }
+
+      setState(prev => {
+        const newResults = { exclude, forceRecommend, alerts };
+        if (JSON.stringify(prev.ruleResults) !== JSON.stringify(newResults)) {
+          return { ...prev, ruleResults: newResults };
+        }
+        return prev;
+      });
     };
-    // Disabled auto-evaluation until API route is created in Step 4
-    // evaluateRules();
-  }, [state.cartItems, state.clientProvided]);
+
+    evaluateRules();
+  }, [state.cartItems, state.clientProvided, state.step1Data.methodology, state.step5Data.selectedFunnel]);
 
   const nextStep = () => {
     setState((prev) => ({
@@ -362,7 +408,7 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
         clientProvided,
         totalOneTime,
         totalMonthly,
-        currentStep: 8
+        currentStep: 1 // <--- ИСПРАВЛЕНИЕ: Теперь шаблон кидает на 1-й шаг, а не на 8-й
       };
     });
   };
@@ -382,8 +428,21 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetWizard = () => {
-    setState(initialState);
-    router.replace('/');
+    setState({
+      ...initialState,
+      currentStep: 1 // <--- ИСПРАВЛЕНИЕ: Принудительно возвращаем на 1-й шаг
+    });
+    
+    // ИСПРАВЛЕНИЕ: Очищаем URL (чтобы убрать ?preset=), чтобы шаблон не применился заново
+    router.replace(pathname);
+    
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const restoreDraft = (draftData: WizardState) => {
+    setState(draftData);
   };
 
   return (
@@ -402,6 +461,7 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
         updateStep1Data,
         updateStep5Data,
         resetWizard,
+        restoreDraft, 
       }}
     >
       {children}

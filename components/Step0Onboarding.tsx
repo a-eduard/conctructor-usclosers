@@ -97,7 +97,6 @@ export function Step0Onboarding() {
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    // Replaced window.location manual parsing with Next.js useSearchParams
     const presetId = searchParams.get('preset');
 
     if (presetId) {
@@ -130,8 +129,9 @@ export function Step0Onboarding() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] w-full">
-      <div className="flex-shrink-0 text-center mb-8 pt-4">
+    <div className="flex flex-col w-full max-w-7xl mx-auto pt-8 pb-20 px-4">
+      {/* Header Section */}
+      <div className="flex-shrink-0 text-center mb-10">
         <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">
           Select Your Business Scale
         </h1>
@@ -164,11 +164,11 @@ export function Step0Onboarding() {
       </div>
 
       {/* Immersive Carousel */}
-      <div className="relative flex-1 min-h-0 w-[calc(100vw-3rem)] max-w-full -ml-6 md:ml-0 md:w-full overflow-hidden mb-8 group">
+      <div className="relative w-full max-w-full group">
         <div 
           ref={carouselRef}
-          className="flex gap-6 h-full overflow-x-auto snap-x snap-mandatory px-6 md:px-0 custom-scrollbar hide-scrollbar items-stretch"
-          style={{ scrollPadding: '0 24px', scrollbarWidth: 'none' }}
+          className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-8 pt-4 custom-scrollbar hide-scrollbar items-stretch"
+          style={{ scrollbarWidth: 'none' }}
         >
           {activeTemplates.map(template => {
             const Icon = template.icon;
@@ -176,12 +176,12 @@ export function Step0Onboarding() {
               <div 
                 key={template.id}
                 ref={el => { cardRefs.current[template.id] = el; }}
-                className="snap-center shrink-0 w-[85vw] md:w-[400px] lg:w-[calc(33.333%-16px)] h-full relative group/card cursor-pointer rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200 dark:border-slate-800"
+                className="snap-center shrink-0 w-[85vw] md:w-[400px] min-h-[500px] relative group/card cursor-pointer rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-slate-200 dark:border-slate-800"
                 onClick={() => applyGlobalTemplate(template.id)}
               >
                 {/* Background Image Layer */}
                 <div className="absolute inset-0 z-0">
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent z-10" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-transparent z-10" />
                   <img 
                     src={template.image} 
                     alt={template.name}
@@ -189,26 +189,33 @@ export function Step0Onboarding() {
                   />
                 </div>
                 
-                {/* Content Layer */}
-                <div className="relative z-20 h-full p-8 flex flex-col justify-end">
+                {/* Content Layer - Adjusted padding here (p-6 pb-10) */}
+                <div className="relative z-20 h-full p-6 pb-10 flex flex-col justify-end">
                   
                   {/* Top Badge (Icon) */}
                   <div className="absolute top-6 left-6 w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 text-white shadow-lg">
                     <Icon className="w-6 h-6" />
                   </div>
                   
-                  <div className="transform translate-y-12 group-hover/card:translate-y-0 transition-transform duration-500">
+                  {/* Content Wrapper - Reduced translate-y */}
+                  <div className="transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-500">
                     <h3 className="text-3xl font-extrabold text-white mb-2 leading-tight tracking-tight">
                       {template.name}
                     </h3>
                     <p className="text-indigo-200 font-medium mb-4 text-sm uppercase tracking-wide">
                       {template.subtitle}
                     </p>
-                    <p className="text-slate-300 text-sm leading-relaxed mb-6 opacity-0 group-hover/card:opacity-100 transition-opacity duration-500 delay-100 h-0 overflow-hidden group-hover/card:h-auto">
-                      {template.description}
-                    </p>
                     
-                    <div className="flex items-center gap-4 text-white mb-6">
+                    {/* Animated Description (Grid approach for smooth height expansion) */}
+                    <div className="grid grid-rows-[0fr] group-hover/card:grid-rows-[1fr] transition-all duration-500 opacity-0 group-hover/card:opacity-100 mb-6">
+                      <div className="overflow-hidden">
+                        <p className="text-slate-300 text-sm leading-relaxed pb-2">
+                          {template.description}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-3 text-white mb-6">
                       <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/20">
                         <Clock className="w-4 h-4 text-emerald-400" />
                         <span className="text-sm font-bold">Launch: {template.timeEstimate}</span>
@@ -233,13 +240,13 @@ export function Step0Onboarding() {
           <>
             <button 
               onClick={scrollLeft}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-800 dark:text-white rounded-full flex items-center justify-center shadow-lg border border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-all hover:bg-white dark:hover:bg-slate-800 z-30"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -ml-5 w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-800 dark:text-white rounded-full flex items-center justify-center shadow-lg border border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-all hover:bg-white dark:hover:bg-slate-800 z-30"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
             <button 
               onClick={scrollRight}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-800 dark:text-white rounded-full flex items-center justify-center shadow-lg border border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-all hover:bg-white dark:hover:bg-slate-800 z-30"
+              className="absolute right-0 top-1/2 -translate-y-1/2 -mr-5 w-12 h-12 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-800 dark:text-white rounded-full flex items-center justify-center shadow-lg border border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100 transition-all hover:bg-white dark:hover:bg-slate-800 z-30"
             >
               <ChevronRight className="w-6 h-6" />
             </button>

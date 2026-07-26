@@ -53,3 +53,34 @@ export async function processCheckout(
     return { success: false, error: "Internal server error during checkout." };
   }
 }
+
+export async function saveOrderDraft(
+  customerInfo: CustomerInfo,
+  totalPrice: number,
+  wizardState: any
+) {
+  if (!customerInfo.email) {
+    return { success: false, error: "Email is required to save a draft." };
+  }
+
+  try {
+    console.log(">>> [SERVER] Saving draft for:", customerInfo.email);
+
+    const draftOrder = await prisma.order.create({
+      data: {
+        customerName: customerInfo.name || "Draft User",
+        customerEmail: customerInfo.email,
+        totalPrice: totalPrice,
+        status: "DRAFT",
+        draftData: wizardState, // Saving the entire configurator state
+      },
+    });
+
+    console.log(">>> [SERVER] Draft successfully saved. ID:", draftOrder.id);
+
+    return { success: true, orderId: draftOrder.id };
+  } catch (error: any) {
+    console.error(">>> [SERVER] Error saving draft:", error);
+    return { success: false, error: error.message || "Failed to save draft to database." };
+  }
+}

@@ -10,7 +10,6 @@ import { useLocale } from 'next-intl';
 import { CreditCard, UploadCloud, CheckCircle, Clock, Search, Activity, Gauge, LayoutDashboard, CheckSquare, BarChart3, Receipt, Settings, Users, LogOut, Menu, X, Bell } from 'lucide-react';
 import { ThemeToggle } from '../../../components/ThemeToggle';
 
-// Keep your types here...
 type Task = { id: string; orderId: string; status: string; slaDeadline: string; optionName: string; vendorName: string; deliverables: any; };
 type Order = { id: string; status: string; totalPrice: string; createdAt: string; };
 
@@ -148,7 +147,7 @@ export default function Dashboard() {
       <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <img src="/usc_logo_s.png" alt="USClosers Logo" className="h-6" />
-          <span className="font-bold text-slate-900 dark:text-white">Client Portal</span>
+          <span className="font-extrabold tracking-widest text-slate-500 uppercase text-sm">Client Portal</span>
         </div>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-2">
           {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useWizard, DIY_HOURS_MAP, CartItem } from "../contexts/WizardContext";
-import { ArrowDown, Bot, User, UserCheck, AlertTriangle, ChevronDown, Briefcase, TrendingUp, Magnet, Settings, DollarSign, Phone, CheckCircle2, Check, X, Clock } from "lucide-react";
+import { ArrowDown, Bot, User, Settings, AlertTriangle, ChevronDown, Briefcase, TrendingUp, Magnet, DollarSign, Phone, CheckCircle2, Check, Clock, Zap } from "lucide-react";
 
 const FUNNEL_STAGES = [
   {
@@ -344,11 +344,20 @@ export function Step2TeamStructure() {
     const current = getSelection(stageId);
     
     if (type === 'hire') {
-      setOpenHireDropdown(openHireDropdown === stageId ? null : stageId);
+      if (current === 'hire') {
+         // Deselect if already hired and clicked again
+         handleDeselect(stageId);
+      } else {
+         setOpenHireDropdown(openHireDropdown === stageId ? null : stageId);
+      }
       return;
     }
     
-    if (current === type) return;
+    if (current === type) {
+       // Deselect if clicking the currently active option
+       handleDeselect(stageId);
+       return;
+    }
 
     handleDeselect(stageId);
     
@@ -455,36 +464,25 @@ export function Step2TeamStructure() {
                       onClick={() => handleSelect(stage.id, 'myself')}
                       className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 hover:-translate-x-1 ${
                         selection === 'myself'
-                          ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10 shadow-sm' 
-                          : 'border-slate-200 dark:border-slate-800/50 hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                          ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm' 
+                          : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <UserCheck className={`w-5 h-5 transition-colors ${selection === 'myself' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
-                        <span className={`font-bold text-sm transition-colors ${selection === 'myself' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <Settings className={`w-5 h-5 transition-colors ${selection === 'myself' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                        <span className={`font-bold text-sm transition-colors ${selection === 'myself' ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
                           Do it myself
                         </span>
                       </div>
                       <div className="flex items-center justify-end w-8 h-8 relative shrink-0 group">
-                        <span className={`text-xs text-slate-500 font-medium transition-opacity absolute right-0 ${selection === 'myself' ? 'opacity-0 md:opacity-100 md:group-hover:opacity-0' : ''}`}>
+                        <span className={`text-xs text-slate-500 font-medium transition-opacity absolute right-0`}>
                           $0
                         </span>
-                        {selection === 'myself' && (
-                          <div 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeselect(stage.id);
-                            }}
-                            className="absolute opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-500 transition-all cursor-pointer right-0"
-                          >
-                            <X className="w-4 h-4" />
-                          </div>
-                        )}
                       </div>
                     </button>
 
                     {/* Hire Option */}
-                    {stage.hire ? (
+                    {stage.hire && (
                       <div className="relative hire-dropdown-container">
                         <button
                           onClick={() => handleSelect(stage.id, 'hire')}
@@ -509,19 +507,7 @@ export function Step2TeamStructure() {
                               </span>
                             )}
                             <div className="relative w-6 h-6 flex items-center justify-center">
-                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-all ${openHireDropdown === stage.id ? 'rotate-180' : ''} ${selection === 'hire' ? 'md:group-hover:opacity-0 absolute' : ''}`} />
-                              {selection === 'hire' && (
-                                <div
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeselect(stage.id);
-                                    setOpenHireDropdown(null);
-                                  }}
-                                  className="absolute opacity-0 md:group-hover:opacity-100 hidden md:flex items-center justify-center w-full h-full text-red-500 bg-red-50 dark:bg-red-500/10 rounded-md hover:bg-red-100 dark:hover:bg-red-500/20 transition-all cursor-pointer"
-                                >
-                                  <X className="w-4 h-4" />
-                                </div>
-                              )}
+                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-all ${openHireDropdown === stage.id ? 'rotate-180' : ''}`} />
                             </div>
                           </div>
                         </button>
@@ -552,71 +538,33 @@ export function Step2TeamStructure() {
                                 </button>
                               );
                             })}
-                            {selection === 'hire' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeselect(stage.id);
-                                  setOpenHireDropdown(null);
-                                }}
-                                className="w-full flex items-center justify-between p-3 text-left transition-colors text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 md:hidden border-t border-slate-100 dark:border-slate-800"
-                              >
-                                <span className="text-sm font-semibold">Remove Selection</span>
-                                <X className="w-4 h-4" />
-                              </button>
-                            )}
                           </div>
                         )}
-                      </div>
-                    ) : (
-                      <div className="w-full bg-slate-50 dark:bg-slate-900/30 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-between p-3 opacity-50">
-                        <div className="flex items-center gap-3">
-                          <User className="w-5 h-5 text-slate-400" />
-                          <span className="font-bold text-sm text-slate-400 dark:text-slate-600">N/A</span>
-                        </div>
                       </div>
                     )}
 
                     {/* AI / Service Option */}
-                    {stage.service ? (
+                    {stage.service && (
                       <button
                         onClick={() => handleSelect(stage.id, 'service')}
                         className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 hover:-translate-x-1 ${
                           selection === 'service'
-                            ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-500/10 dark:border-purple-500/50 shadow-sm' 
-                            : 'border-slate-200 dark:border-slate-800/50 hover:border-purple-200 dark:hover:border-purple-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 dark:border-indigo-500/50 shadow-sm' 
+                            : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Bot className={`w-5 h-5 transition-colors ${selection === 'service' ? 'text-purple-600 dark:text-purple-400' : 'text-slate-400'}`} />
-                          <span className={`font-bold text-sm text-left leading-tight transition-colors ${selection === 'service' ? 'text-purple-700 dark:text-purple-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                          <Zap className={`w-5 h-5 transition-colors ${selection === 'service' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                          <span className={`font-bold text-sm text-left leading-tight transition-colors ${selection === 'service' ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
                             {stage.service.name}
                           </span>
                         </div>
                         <div className="flex items-center justify-end w-16 h-8 relative shrink-0 group">
-                          <span className={`text-xs font-mono font-semibold text-slate-500 transition-opacity absolute right-0 ${selection === 'service' ? 'opacity-0 md:opacity-100 md:group-hover:opacity-0' : ''}`}>
+                          <span className={`text-xs font-mono font-semibold text-slate-500 transition-opacity absolute right-0`}>
                             +${stage.service.price.toLocaleString()}
                           </span>
-                          {selection === 'service' && (
-                            <div 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeselect(stage.id);
-                              }}
-                              className="absolute opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-500 transition-all cursor-pointer right-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </div>
-                          )}
                         </div>
                       </button>
-                    ) : (
-                      <div className="w-full bg-slate-50 dark:bg-slate-900/30 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-between p-3 opacity-50">
-                        <div className="flex items-center gap-3">
-                          <Bot className="w-5 h-5 text-slate-400" />
-                          <span className="font-bold text-sm text-slate-400 dark:text-slate-600">N/A</span>
-                        </div>
-                      </div>
                     )}
                   </div>
                 </div>
@@ -640,14 +588,10 @@ export function Step2TeamStructure() {
                       ) : (
                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                           {/* 1. Action Chevron */}
-                          <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold shrink-0 ${
-                            selection === 'myself' ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400' :
-                            selection === 'hire' ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400' :
-                            'bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/30 text-purple-700 dark:text-purple-400'
-                          }`}>
-                            {selection === 'myself' && <UserCheck className="w-3.5 h-3.5" />}
+                          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold shrink-0 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400">
+                            {selection === 'myself' && <Settings className="w-3.5 h-3.5" />}
                             {selection === 'hire' && <User className="w-3.5 h-3.5" />}
-                            {selection === 'service' && <Bot className="w-3.5 h-3.5" />}
+                            {selection === 'service' && <Zap className="w-3.5 h-3.5" />}
                             
                             <span className="truncate max-w-[100px] md:max-w-[150px]">
                               {selection === 'myself' ? 'Do it myself' :
@@ -664,11 +608,7 @@ export function Step2TeamStructure() {
                           </div>
 
                           {/* 3. Time Chevron */}
-                          <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold shrink-0 ${
-                            selection === 'myself' ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400' : 
-                            selection === 'hire' ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400' :
-                            'bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/30 text-purple-700 dark:text-purple-400'
-                          }`}>
+                          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold shrink-0 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400">
                             <Clock className="w-3.5 h-3.5" />
                             <span>
                               {selection === 'myself' ? `${DIY_HOURS_MAP[stage.id]}hr/m (You)` : 

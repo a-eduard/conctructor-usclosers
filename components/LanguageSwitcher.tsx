@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import { AnimatePresence, motion } from "motion/react";
 
-// Updated languages based on our Roadmap
 const languages = [
   { code: "EN", name: "English", flag: "https://flagcdn.com/w40/us.png" },
   { code: "ES", name: "Español", flag: "https://flagcdn.com/w40/es.png" },
@@ -28,7 +27,6 @@ export function LanguageSwitcher() {
     
     if (newLocale === currentLocale) return;
     
-    // Replace the locale in the Next.js pathname
     const segments = pathname.split("/");
     segments[1] = newLocale; 
     const newPath = segments.join("/");
@@ -42,13 +40,13 @@ export function LanguageSwitcher() {
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
     >
-      <button className="flex items-center gap-2 px-3 py-2 rounded-xl font-bold text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
+      <button className="flex items-center gap-2 px-3 py-2 rounded-xl font-semibold text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
         <img
           src={activeLanguage.flag}
           alt={activeLanguage.code}
-          className="w-4 h-4 rounded-full opacity-90 shadow-sm object-cover"
+          className="w-4 h-4 rounded-full shadow-sm object-cover"
         />
-        <span className="hidden sm:inline tracking-wider text-[11px]">
+        <span className="hidden sm:inline">
           {activeLanguage.code}
         </span>
       </button>

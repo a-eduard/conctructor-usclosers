@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useWizard } from "../contexts/WizardContext";
-import { CheckCircle, Circle, UploadCloud, Sparkles, XCircle } from "lucide-react";
+import { CheckCircle, Circle, UploadCloud, Sparkles } from "lucide-react";
 
 export function Step6DataScraping() {
   const { state, addCartItem, removeCartItem, markClientProvided, removeClientProvided } = useWizard();
@@ -13,27 +13,27 @@ export function Step6DataScraping() {
     {
       id: "inbound_traffic",
       name: "Inbound Traffic",
-      description: "Setup of hot lead generation (paid ads, forms).",
+      description: "Setup of targeted ad campaigns (LinkedIn, Google) to generate hot inbound leads.",
       price: 2500,
       sla: "10 Days",
-      isRecommended: selectedFunnel === "inbound_demo_funnel",
+      isRecommended: selectedFunnel === "inbound_demo_funnel" || selectedFunnel === "automated_webinar" || selectedFunnel === "quick_callback",
       category: 'service' as const,
       purpose: "Setup of hot lead generation (paid ads, forms)."
     },
     {
       id: "outbound_parsing",
       name: "Outbound Parsing",
-      description: "Scraping targets from LinkedIn and other databases.",
+      description: "Custom scraping of verified B2B targets from LinkedIn, Apollo, and niche directories.",
       price: 1200,
       sla: "5 Days",
-      isRecommended: selectedFunnel === "outbound_cold_meeting",
+      isRecommended: selectedFunnel === "outbound_cold_meeting" || selectedFunnel === "micro_consulting",
       category: 'service' as const,
       purpose: "Scraping targets from LinkedIn and other databases."
     },
     {
       id: "crm_enrichment",
       name: "CRM Enrichment",
-      description: "Cleaning and updating old/existing databases.",
+      description: "Waterfall enrichment (email & phone verification) to clean and revive your existing database.",
       price: 800,
       sla: "3 Days",
       isRecommended: selectedFunnel === "outbound_cold_meeting",
@@ -43,7 +43,7 @@ export function Step6DataScraping() {
     {
       id: "intent_data",
       name: "Intent Data",
-      description: "Purchasing signals about companies actively looking for solutions.",
+      description: "Purchase active buying signals (e.g., companies currently searching for your solution keywords).",
       price: 1500,
       sla: "7 Days",
       isRecommended: false,
@@ -56,6 +56,8 @@ export function Step6DataScraping() {
     const isInCart = state.cartItems.some(i => i.optionId === item.id);
     if (!isInCart) {
       addCartItem({ allocatedHours: 0, paymentType: 'one-time', optionId: item.id, name: item.name, price: item.price, sla: item.sla, category: item.category, purpose: item.purpose });
+    } else {
+      removeCartItem(item.id);
     }
   };
 
@@ -63,22 +65,23 @@ export function Step6DataScraping() {
     const isProvided = state.clientProvided.includes("byo_data");
     if (!isProvided) {
       markClientProvided("byo_data");
+    } else {
+      removeClientProvided("byo_data");
     }
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div id="diy-item-data-sources" className="animate-in fade-in slide-in-from-bottom-4 duration-500 scroll-m-24">
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8 mb-8">
         {dataSources.map(source => {
           const isInCart = state.cartItems.some(i => i.optionId === source.id);
           return (
             <div
               key={source.id}
-              id={`diy-item-${source.id}`}
               onClick={() => handleToggleService(source)}
-              className={`scroll-m-24 group relative cursor-pointer bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 ${
+              className={`group relative cursor-pointer bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 ${
                 isInCart 
-                  ? 'border-2 border-indigo-600 shadow-lg scale-[1.02] ring-4 ring-indigo-500/10 cursor-default' 
+                  ? 'border-2 border-indigo-600 shadow-lg scale-[1.02] ring-4 ring-indigo-500/10' 
                   : 'border-2 border-slate-200 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md'
               }`}
             >
@@ -92,16 +95,7 @@ export function Step6DataScraping() {
                   {source.name}
                 </h3>
                 {isInCart ? (
-                  <div 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeCartItem(source.id);
-                    }}
-                    className="relative w-6 h-6 flex items-center justify-center text-red-500 transition-colors cursor-pointer"
-                  >
-                    <CheckCircle className="w-6 h-6 text-indigo-600 dark:text-indigo-400 absolute opacity-0 md:opacity-100 md:group-hover:opacity-0 transition-opacity scale-110" />
-                    <XCircle className="w-6 h-6 text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity absolute scale-110" />
-                  </div>
+                  <CheckCircle className="w-6 h-6 text-indigo-600 dark:text-indigo-400 scale-110 transition-transform" />
                 ) : (
                   <Circle className="w-6 h-6 text-slate-300 dark:text-slate-600 group-hover:text-indigo-300 dark:group-hover:text-indigo-500/50 transition-colors" />
                 )}
@@ -122,36 +116,27 @@ export function Step6DataScraping() {
           );
         })}
 
-        {/* Bring Your Own (BYO) */}
+        {/* Bring Your Own (BYO) - Standardized to Indigo */}
         <div
           onClick={handleToggleBYO}
-          className={`scroll-m-24 group relative cursor-pointer bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 ${
+          className={`group relative cursor-pointer bg-white dark:bg-slate-900/50 backdrop-blur-md rounded-2xl p-6 transition-all duration-300 ${
             state.clientProvided.includes("byo_data")
-              ? 'border-2 border-emerald-500 shadow-lg scale-[1.02] ring-4 ring-emerald-500/10 cursor-default' 
+              ? 'border-2 border-indigo-600 shadow-lg scale-[1.02] ring-4 ring-indigo-500/10' 
               : 'border-2 border-slate-200 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md'
           }`}
         >
           <div className="flex items-start justify-between mb-2">
-            <h3 className={`text-lg font-bold transition-colors ${state.clientProvided.includes("byo_data") ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400'}`}>
+            <h3 className={`text-lg font-bold transition-colors ${state.clientProvided.includes("byo_data") ? 'text-indigo-900 dark:text-indigo-100' : 'text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400'}`}>
               Bring Your Own (BYO)
             </h3>
             {state.clientProvided.includes("byo_data") ? (
-              <div 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeClientProvided("byo_data");
-                }}
-                className="relative w-6 h-6 flex items-center justify-center text-red-500 transition-colors cursor-pointer"
-              >
-                <CheckCircle className="w-6 h-6 text-emerald-500 dark:text-emerald-400 absolute opacity-0 md:opacity-100 md:group-hover:opacity-0 transition-opacity scale-110" />
-                <XCircle className="w-6 h-6 text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity absolute scale-110" />
-              </div>
+              <CheckCircle className="w-6 h-6 text-indigo-600 dark:text-indigo-400 scale-110 transition-transform" />
             ) : (
-              <Circle className="w-6 h-6 text-slate-300 dark:text-slate-600 group-hover:text-emerald-300 dark:group-hover:text-emerald-500/50 transition-colors" />
+              <Circle className="w-6 h-6 text-slate-300 dark:text-slate-600 group-hover:text-indigo-300 dark:group-hover:text-indigo-500/50 transition-colors" />
             )}
           </div>
           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-4 font-medium">
-            Upload my own CSV file.
+            Upload your own verified B2B database via CSV file.
           </p>
           <div className="flex items-center gap-4 mt-auto pt-4 border-t border-slate-100 dark:border-slate-800">
             <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
@@ -160,10 +145,10 @@ export function Step6DataScraping() {
           </div>
 
           {state.clientProvided.includes("byo_data") && (
-            <div className="mt-4 p-3 bg-emerald-50/80 dark:bg-emerald-500/10 rounded-xl border-2 border-dashed border-emerald-200 dark:border-emerald-500/30 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
-              <UploadCloud className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-emerald-800 dark:text-emerald-200 font-semibold leading-relaxed">
-                CSV upload will be available in your dashboard after checkout.
+            <div className="mt-4 p-3 bg-indigo-50/80 dark:bg-indigo-500/10 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-500/30 flex items-start gap-3 animate-in fade-in zoom-in-95 duration-300">
+              <UploadCloud className="w-5 h-5 text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-indigo-800 dark:text-indigo-200 font-semibold leading-relaxed">
+                Secure CSV upload interface will be unlocked in your dashboard after checkout.
               </p>
             </div>
           )}

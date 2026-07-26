@@ -2,11 +2,12 @@
 
 import React from "react";
 import { useWizard } from "../contexts/WizardContext";
-import { CheckCircle, UploadCloud, Info, X } from "lucide-react";
+import { UploadCloud, Info, Settings, Zap } from "lucide-react";
 
 export function Step4LegalFramework() {
   const { state } = useWizard();
 
+  // Smart Logic: If the user is doing everything themselves, they don't need a hiring agreement.
   const isLoneWolf = 
     state.clientProvided.includes('lead_gen') &&
     state.clientProvided.includes('qualification') &&
@@ -19,7 +20,7 @@ export function Step4LegalFramework() {
           <Step4LegalSelector 
             optionId="hiring_agreement"
             name="Hiring Agreement"
-            description="Standard hiring and contractor agreements for your team."
+            description="Standard hiring and contractor agreements (1099/W2) to safely scale your team."
             diyText="Upload my own"
             buyText="Buy as a service"
             price={400}
@@ -33,19 +34,19 @@ export function Step4LegalFramework() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="text-xl font-bold text-slate-500 dark:text-slate-400">Hiring Agreement</h3>
-                  <div className="group relative inline-flex">
+                  <div className="group/tooltip relative inline-flex">
                     <Info className="w-4 h-4 text-slate-400 hover:text-slate-600 transition-colors" />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2.5 bg-slate-900 text-white text-xs font-medium rounded-xl shadow-xl text-center z-10 animate-in fade-in zoom-in-95 duration-200">
-                      Not required for solo founders
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:block w-48 p-2.5 bg-slate-800 dark:bg-slate-700 text-white text-xs font-medium rounded-xl shadow-xl text-center z-10 animate-in fade-in zoom-in-95 duration-200">
+                      Not required since you assigned all sales roles to yourself (Lone Wolf).
                     </div>
                   </div>
                 </div>
                 <p className="text-slate-400 dark:text-slate-500 text-sm leading-relaxed max-w-2xl">
-                  Standard hiring and contractor agreements for your team.
+                  Standard hiring and contractor agreements (1099/W2) to safely scale your team.
                 </p>
               </div>
-              <div className="shrink-0 w-full xl:w-72">
-                <div className="w-full text-center p-4 rounded-2xl bg-slate-200/50 dark:bg-slate-800/50 text-slate-500 text-sm font-bold border border-transparent">
+              <div className="shrink-0 w-full xl:w-[280px]">
+                <div className="w-full text-center p-3 rounded-xl bg-slate-200/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-sm font-bold border border-transparent">
                   Not required
                 </div>
               </div>
@@ -55,8 +56,8 @@ export function Step4LegalFramework() {
         
         <Step4LegalSelector 
           optionId="service_agreement"
-          name="Service Agreement"
-          description="Client-facing service agreements to protect your agency."
+          name="Service Agreement (MSA)"
+          description="Iron-clad client-facing Master Service Agreements to protect your agency from liability and scope creep."
           diyText="Upload my own"
           buyText="Buy as a service"
           price={600}
@@ -67,8 +68,8 @@ export function Step4LegalFramework() {
         
         <Step4LegalSelector 
           optionId="terms_of_service"
-          name="Terms of Service"
-          description="Standard ToS and Privacy Policy for your platform or service."
+          name="Terms of Service & Privacy"
+          description="Website Terms of Service, Privacy Policy, and Cookie Policy customized for your platform."
           diyText="Upload my own"
           buyText="Buy as a service"
           price={800}
@@ -79,14 +80,14 @@ export function Step4LegalFramework() {
         
         <Step4LegalSelector 
           optionId="gdpr_compliance"
-          name="GDPR Compliance"
-          description="Ensure full GDPR and privacy compliance for European clients."
+          name="GDPR & CCPA Compliance"
+          description="Comprehensive privacy compliance setup and documentation for processing international data."
           diyText="I am compliant"
           buyText="Buy as a service"
           price={1500}
           sla="7 Days"
           category="service"
-          purpose="Full GDPR and privacy compliance for European clients."
+          purpose="Full GDPR and privacy compliance for European and US clients."
         />
       </div>
     </div>
@@ -120,8 +121,8 @@ function Step4LegalSelector({
   const isInCart = state.cartItems.some(i => i.optionId === optionId);
 
   return (
-    <div className="bg-white dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-800/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div id={`diy-item-${optionId}`} className="scroll-m-24 bg-white dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-800/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
         <div className="flex-1">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">{name}</h3>
           <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-2xl">
@@ -142,67 +143,57 @@ function Step4LegalSelector({
         </div>
         
         <div className="flex flex-col gap-2 shrink-0 w-full md:w-[280px]">
+          {/* DIY Button */}
           <button
             onClick={() => {
-              if (!isProvided) markClientProvided(optionId);
+              if (isProvided) {
+                removeClientProvided(optionId);
+              } else {
+                if (isInCart) removeCartItem(optionId);
+                markClientProvided(optionId);
+              }
             }}
             className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 ${
               isProvided 
-                ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-500/10 shadow-sm cursor-default' 
-                : 'border-slate-200 dark:border-slate-800/50 hover:border-emerald-200 dark:hover:border-emerald-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer hover:-translate-x-1'
-            }`}
-          >
-            <div className="flex items-center gap-3 text-left">
-              <CheckCircle className={`w-5 h-5 shrink-0 transition-colors ${isProvided ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
-              <span className={`font-bold text-sm transition-colors ${isProvided ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                {diyText}
-              </span>
-            </div>
-            <div className="flex items-center justify-end w-8 h-8 relative shrink-0 group">
-              <span className={`text-xs text-slate-500 font-medium transition-opacity absolute right-0 ${isProvided ? 'opacity-0 md:opacity-100 md:group-hover:opacity-0' : ''}`}>$0</span>
-              {isProvided && (
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeClientProvided(optionId);
-                  }}
-                  className="absolute opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md bg-red-50 hover:bg-red-100 text-red-500 transition-all cursor-pointer right-0"
-                >
-                  <X className="w-4 h-4" />
-                </div>
-              )}
-            </div>
-          </button>
-
-          <button
-            onClick={() => {
-              if (!isInCart) addCartItem({ allocatedHours: 0, paymentType: 'one-time', optionId, name: buyText, price, sla, category, purpose });
-            }}
-            className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 ${
-              isInCart 
-                ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm cursor-default' 
+                ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm' 
                 : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer hover:-translate-x-1'
             }`}
           >
             <div className="flex items-center gap-3 text-left">
-              <CheckCircle className={`w-5 h-5 shrink-0 transition-colors ${isInCart ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+              <Settings className={`w-5 h-5 shrink-0 transition-colors ${isProvided ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+              <span className={`font-bold text-sm transition-colors ${isProvided ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                {diyText}
+              </span>
+            </div>
+            <div className="flex items-center justify-end w-8 h-8 relative shrink-0 group">
+              <span className={`text-xs text-slate-500 font-medium right-0`}>$0</span>
+            </div>
+          </button>
+
+          {/* Service Button */}
+          <button
+            onClick={() => {
+              if (isInCart) {
+                removeCartItem(optionId);
+              } else {
+                if (isProvided) removeClientProvided(optionId);
+                addCartItem({ allocatedHours: 0, paymentType: 'one-time', optionId, name: buyText, price, sla, category, purpose });
+              }
+            }}
+            className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 ${
+              isInCart 
+                ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm' 
+                : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80 cursor-pointer hover:-translate-x-1'
+            }`}
+          >
+            <div className="flex items-center gap-3 text-left">
+              <Zap className={`w-5 h-5 shrink-0 transition-colors ${isInCart ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
               <span className={`font-bold text-sm transition-colors ${isInCart ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
                 {buyText}
               </span>
             </div>
             <div className="flex items-center justify-end w-16 h-8 relative shrink-0 group">
-              <span className={`text-xs font-mono font-semibold text-slate-500 transition-opacity absolute right-0 ${isInCart ? 'opacity-0 md:opacity-100 md:group-hover:opacity-0' : ''}`}>+${price.toLocaleString()}</span>
-              {isInCart && (
-                <div 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeCartItem(optionId);
-                  }}
-                  className="absolute opacity-100 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center w-6 h-6 rounded-md bg-red-50 hover:bg-red-100 text-red-500 transition-all cursor-pointer right-0"
-                >
-                  <X className="w-4 h-4" />
-                </div>
-              )}
+              <span className={`text-xs font-mono font-semibold text-slate-500 right-0`}>+${price.toLocaleString()}</span>
             </div>
           </button>
         </div>
