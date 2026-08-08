@@ -1,0 +1,374 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId], map: "Account_userId_fkey")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Session_userId_fkey")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("USER")
+  password      String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Order {
+  id                String     @id @default(uuid())
+  customerName      String
+  customerEmail     String
+  companyType       String?
+  totalOneTime      Float      @default(0)
+  totalMonthly      Float      @default(0)
+  status            String     @default("DRAFT")
+  acv               String?
+  subscriptionModel String?
+  methodology       String?
+  channels          String?    @db.LongText
+  selectedFunnel    String?
+  clientProvided    String?    @db.LongText
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  cartItems         CartItem[]
+}
+
+model CartItem {
+  id             String  @id @default(uuid())
+  orderId        String
+  optionId       String
+  name           String
+  price          Float
+  paymentType    String
+  sla            String?
+  category       String?
+  purpose        String?
+  allocatedHours Int     @default(0)
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model bookings {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  email      String    @db.VarChar(255)
+  date       String    @db.VarChar(255)
+  time       String    @db.VarChar(255)
+  status     String?   @default("pending") @db.VarChar(50)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model data_leads {
+  id          Int       @id @default(autoincrement())
+  email       String    @db.VarChar(255)
+  website     String    @db.VarChar(255)
+  social_link String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model ec_components {
+  id            String  @id @db.VarChar(36)
+  offer_id      String  @db.VarChar(36)
+  name          String  @db.VarChar(255)
+  type          String  @db.VarChar(50)
+  description   String? @db.Text
+  why_need_this String? @db.Text
+}
+
+model ec_offer_categories {
+  id   String @id @db.VarChar(36)
+  name String @db.VarChar(100)
+}
+
+model ec_offers {
+  id           String  @id @db.VarChar(36)
+  category_id  String  @db.VarChar(36)
+  name         String  @db.VarChar(255)
+  concept      String  @db.Text
+  pain         String  @db.Text
+  action       String  @db.Text
+  features     String  @db.LongText
+  base_price   Decimal @db.Decimal(10, 2)
+  delivery_sla String  @db.VarChar(100)
+  rules_engine String? @db.LongText
+  presets      String? @db.LongText
+}
+
+model ec_options {
+  id              String   @id @db.VarChar(36)
+  component_id    String   @db.VarChar(36)
+  vendor_id       String?  @db.VarChar(36)
+  name            String   @db.VarChar(255)
+  description     String?  @db.Text
+  price_delta     Decimal  @db.Decimal(10, 2)
+  is_default      Boolean? @default(false)
+  type            String?  @db.VarChar(50)
+  requires_upload Boolean? @default(false)
+  why_need_this   String?  @db.Text
+  unit_name       String?  @db.VarChar(50)
+  min_quantity    Int?     @default(1)
+  max_quantity    Int?     @default(1)
+  step            Int?     @default(1)
+  sla_impact      String?  @default("NONE") @db.VarChar(50)
+}
+
+model ec_order_tasks {
+  id           String    @id @db.VarChar(36)
+  order_id     String    @db.VarChar(36)
+  vendor_id    String?   @db.VarChar(36)
+  component_id String?   @db.VarChar(36)
+  option_id    String?   @db.VarChar(36)
+  status       String    @default("PENDING") @db.VarChar(50)
+  sla_deadline DateTime? @db.Timestamp(0)
+  deliverables String?   @db.LongText
+  created_at   DateTime  @default(now()) @db.Timestamp(0)
+}
+
+model ec_orders {
+  id             String   @id @db.VarChar(36)
+  offer_id       String   @db.VarChar(36)
+  customer_name  String   @db.VarChar(255)
+  customer_email String   @db.VarChar(255)
+  total_price    Decimal  @db.Decimal(10, 2)
+  status         String   @default("PENDING_PAYMENT") @db.VarChar(50)
+  meta           String?  @db.LongText
+  created_at     DateTime @default(now()) @db.Timestamp(0)
+  sla_tier       String?  @default("GUARANTEED") @db.VarChar(50)
+}
+
+model ec_vendors {
+  id     String   @id @db.VarChar(36)
+  name   String   @db.VarChar(255)
+  rating Decimal? @db.Decimal(3, 2)
+}
+
+model fractional_closer_leads {
+  id            Int       @id @default(autoincrement())
+  email         String    @db.VarChar(255)
+  average_check String    @db.VarChar(255)
+  social_link   String?   @db.VarChar(255)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model fractional_leads {
+  id          Int       @id @default(autoincrement())
+  email       String    @db.VarChar(255)
+  sales_reps  String    @db.VarChar(255)
+  social_link String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model fractional_scout_leads {
+  id          Int       @id @default(autoincrement())
+  email       String    @db.VarChar(255)
+  crm_type    String    @db.VarChar(255)
+  social_link String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model fractional_sdr_leads {
+  id          Int       @id @default(autoincrement())
+  email       String    @db.VarChar(255)
+  target_geo  String    @db.VarChar(255)
+  social_link String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model growth_leads {
+  id           Int       @id @default(autoincrement())
+  email        String    @db.VarChar(255)
+  product_link String    @db.VarChar(255)
+  social_link  String?   @db.VarChar(255)
+  created_at   DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model inhouse_leads {
+  id          Int       @id @default(autoincrement())
+  email       String    @db.VarChar(255)
+  team_size   String    @db.VarChar(255)
+  social_link String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model leads {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  email      String    @db.VarChar(255)
+  phone      String?   @db.VarChar(255)
+  niche      String?   @db.VarChar(255)
+  source     String?   @default("main") @db.VarChar(255)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model partnership_leads {
+  id             Int       @id @default(autoincrement())
+  email          String    @db.VarChar(255)
+  target_partner String    @db.VarChar(255)
+  social_link    String?   @db.VarChar(255)
+  created_at     DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model predictable_leads {
+  id          Int       @id @default(autoincrement())
+  email       String    @db.VarChar(255)
+  deal_size   String    @db.VarChar(255)
+  social_link String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model sales_ops_cloud_leads {
+  id          Int       @id @default(autoincrement())
+  email       String    @db.VarChar(255)
+  geo         String    @db.VarChar(255)
+  social_link String?   @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model talent_leads {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  email       String    @db.VarChar(255)
+  social_link String?   @db.VarChar(255)
+  grade       String?   @db.VarChar(50)
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+}
+
+// ==========================================
+// WIZARD BUILDER & CMS TABLES (ADDED FOR MYSQL)
+// ==========================================
+
+model WizardStep {
+  id          String        @id @default(uuid())
+  stepNumber  Int           @unique
+  title       String
+  description String?       @db.Text
+  
+  blocks      WizardBlock[]
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model WizardBlock {
+  id          String        @id @default(uuid())
+  stepId      String
+  step        WizardStep    @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?       @db.Text
+  imageUrl    String?
+  order       Int           @default(0)
+  
+  options     WizardOption[]
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  @@index([stepId])
+}
+
+model WizardOption {
+  id             String      @id @default(uuid())
+  blockId        String
+  block          WizardBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  
+  type           String      
+  name           String      
+  price          Float       @default(0)
+  imageUrl       String?
+  sla            String?
+  category       String?     
+  purpose        String?
+  allocatedHours Int         @default(0)
+  
+  detailsTitle   String?     @db.Text
+  bullets        String?     @db.LongText
+  grades         String?     @db.LongText
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  @@index([blockId])
+}
+
+model Solution {
+  id             String   @id @default(uuid())
+  icon           String
+  name           String
+  concept        String   @db.Text
+  price          String
+  sla            String
+  color          String
+  imageUrl       String?
+  
+  step1Data      String?  @db.LongText
+  step5Data      String?  @db.LongText
+  clientProvided String?  @db.LongText
+  cartItems      String?  @db.LongText
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model OnboardingPreset {
+  id             String   @id @default(uuid())
+  segment        String   
+  icon           String   
+  name           String
+  subtitle       String
+  description    String   @db.Text
+  timeEstimate   String
+  costEstimate   String
+  imageUrl       String?
+  
+  step1Data      String?  @db.LongText
+  step5Data      String?  @db.LongText
+  clientProvided String?  @db.LongText
+  cartItems      String?  @db.LongText
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
