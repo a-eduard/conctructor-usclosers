@@ -1,5 +1,49 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Docker
+
+The application requires a MySQL database. Docker Compose starts MySQL, applies
+the current Prisma schema to a clean database, and then starts the standalone
+Next.js server.
+
+```bash
+cp .env.docker.example .env
+# Replace all placeholder secrets in .env, then run:
+docker compose up --build -d
+```
+
+Compose loads runtime secrets from the `.env` file in the same directory as
+`compose.yaml`. Keep `DATABASE_URL`, `NEXTAUTH_SECRET`, and all MySQL passwords
+there; `.env` is excluded from Git and from the Docker build context.
+
+Open `http://localhost:3000`. Check container state and logs with:
+
+```bash
+docker compose ps
+docker compose logs -f app
+```
+
+MySQL data is persisted in the named `mysql-data` volume. The database is not
+published to the host. A reverse proxy is not required for local use; in
+production, place the app behind the platform ingress or a TLS reverse proxy.
+
+Large image assets are not stored in Git or baked into the image. Before
+starting the stack, place them on the Docker host in these directories:
+
+```text
+/opt/usclosers-constructor/images
+/opt/usclosers-constructor/solutions
+```
+
+Compose mounts them read-only as `/app/public/images` and
+`/app/public/solutions`. Preserve the same relative paths and filenames that
+were used under the project's `public/images` and `public/solutions` folders.
+
+The existing Prisma migration history does not match the current schema, so the
+one-shot `db-init` service currently uses `prisma db push` for clean deployments.
+Create a current baseline migration before adopting migration-driven production
+deployments.
+
 ## Getting Started
 
 First, run the development server:

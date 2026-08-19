@@ -2,8 +2,8 @@ import { prisma } from "../../../../lib/prisma";
 import { notFound } from "next/navigation";
 import { DraftRestorer } from "./DraftRestorer";
 
-export default async function DraftPage({ params }: { params: { locale: string; id: string } }) {
-  const { id, locale } = params;
+export default async function DraftPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
+  const { id, locale } = await params;
 
   // 1. Fetch draft from MySQL, INCLUDING the related cartItems table
   const draft = await prisma.order.findUnique({
