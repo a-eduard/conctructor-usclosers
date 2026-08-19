@@ -63,9 +63,9 @@ export default function LoginPage() {
         <div className="flex justify-center mb-8">
           <Link href={`/${locale}`}>
             <img
-              src="/usc_logo_s.png"
+              src="/usc_logo.png"
               alt="USClosers"
-              className="h-10 hover:opacity-80 transition-opacity"
+              className="h-10 w-auto object-contain hover:opacity-80 transition-opacity"
             />
           </Link>
         </div>

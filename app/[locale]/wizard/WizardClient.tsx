@@ -361,15 +361,14 @@ export default function WizardClient({
       )}
 
       <Header 
-        isSticky={false}
-        className="border-none bg-transparent"
+        isSticky={true}
         leftContent={
-          <>
-            <div className="hidden md:block w-px h-6 bg-slate-200 dark:bg-slate-700 -ml-2" />
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block w-px h-6 bg-slate-200 dark:bg-slate-700" />
             <span className="font-semibold text-slate-600 dark:text-slate-300 text-sm">
               Guided Setup
             </span>
-          </>
+          </div>
         }
         rightContent={
           <button
@@ -501,7 +500,9 @@ export default function WizardClient({
 }
 
 function WizardContent({ step, dbSteps, dbPresets }: { step: number; dbSteps: any[], dbPresets?: any[] }) {
-  if (step === 0) return <div className="relative animate-in fade-in duration-700 ease-out fill-mode-both"><Step0Onboarding dbPresets={dbPresets} /></div>;
+  // Комментируем нулевой шаг, чтобы он никогда не открывался
+  // if (step === 0) return <div className="relative animate-in fade-in duration-700 ease-out fill-mode-both"><Step0Onboarding dbPresets={dbPresets} /></div>;
+  
   if (step === 1) return <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both"><Step1SalesStrategy dbSteps={dbSteps} /></div>;
   if (step === 2) return <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both"><Step2TeamStructure dbSteps={dbSteps} /></div>;
   if (step === 3) return <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both"><Step3SalesMaterials dbSteps={dbSteps} /></div>;
