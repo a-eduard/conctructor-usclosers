@@ -5,19 +5,31 @@ import { useRouter } from "next/navigation";
 import { useWizard } from "../../../../contexts/WizardContext";
 import { Loader2 } from "lucide-react";
 
-export function DraftRestorer({ draftData, locale }: { draftData: any; locale: string }) {
+export function DraftRestorer({ draftPayload, locale }: { draftPayload: any; locale: string }) {
   const { restoreDraft } = useWizard();
   const router = useRouter();
 
   useEffect(() => {
-    if (draftData) {
-      // 1. Inject saved data into global state
-      restoreDraft(draftData);
+    if (draftPayload) {
       
-      // 2. Redirect back to wizard (it will open on the exact step they left off)
+      const fullState = {
+        currentStep: draftPayload.cartItems && draftPayload.cartItems.length > 0 ? 8 : 1,
+        clientProvided: draftPayload.clientProvided || [],
+        cartItems: draftPayload.cartItems || [],
+        totalOneTime: (draftPayload.cartItems || []).filter((i: any) => i.paymentType === "one-time").reduce((acc: number, item: any) => acc + item.price, 0),
+        totalMonthly: (draftPayload.cartItems || []).filter((i: any) => i.paymentType === "monthly").reduce((acc: number, item: any) => acc + item.price, 0),
+        ruleResults: { exclude: [], forceRecommend: [], alerts: [] },
+        step1Data: draftPayload.step1Data,
+        step5Data: draftPayload.step5Data,
+        availableOffers: [],
+        isLoadingOffers: false,
+      };
+
+      // Type assertion to bypass strict generic mismatch during restore
+      restoreDraft(fullState as any);
       router.push(`/${locale}/wizard`);
     }
-  }, [draftData, locale, restoreDraft, router]);
+  }, [draftPayload, locale, restoreDraft, router]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#0B0F19] selection:bg-indigo-500/30">

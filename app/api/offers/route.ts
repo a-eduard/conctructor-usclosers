@@ -1,23 +1,15 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    // Fetch all offers from the database and include their connected category
-    const offers = await prisma.offer.findMany({
-      include: {
-        category: true,
-      },
-    });
-    
-    return NextResponse.json(offers);
+    // Return empty array as the legacy e-commerce structure is no longer used
+    return NextResponse.json([]);
   } catch (error) {
-    console.error("Database error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch offers from database" },
-      { status: 500 }
-    );
+    console.error("GET Offers Error:", error);
+    return NextResponse.json({ error: "Failed to fetch offers" }, { status: 500 });
   }
+}
+
+export async function POST(request: NextRequest) {
+  return NextResponse.json({ error: "Endpoint deprecated" }, { status: 400 });
 }

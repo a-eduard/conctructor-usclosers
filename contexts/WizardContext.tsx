@@ -14,13 +14,47 @@ export type CartItem = {
   allocatedHours?: number;
 };
 
-// 1. New Smart Alert Type
 export type SmartAlert = {
   id: string;
   message: string;
   actionText: string;
   targetStep: number;
   targetElementId: string;
+};
+
+export type OfferOption = {
+  id: string;
+  name: string;
+  priceDelta: string;
+  whyNeedThis: string | null;
+  unitName: string | null;
+  minQuantity: number;
+  maxQuantity: number;
+  step: number;
+  slaImpact: string;
+};
+
+export type OfferComponent = {
+  id: string;
+  name: string;
+  type: string;
+  whyNeedThis: string | null;
+  options: OfferOption[];
+};
+
+export type DatabaseOffer = {
+  id: string;
+  name: string;
+  concept: string;
+  pain: string;
+  action: string;
+  basePrice: string;
+  deliverySla: string;
+  categoryId: string;
+  features: string[];
+  rulesEngine: any[];
+  presets: any[];
+  components?: OfferComponent[];
 };
 
 export type RuleEvaluationResults = {
@@ -91,6 +125,8 @@ type WizardState = {
   ruleResults: RuleEvaluationResults;
   step1Data: Step1Data;
   step5Data: Step5Data;
+  availableOffers: DatabaseOffer[]; 
+  isLoadingOffers: boolean;         
 };
 
 type WizardContextType = {
@@ -104,14 +140,15 @@ type WizardContextType = {
   removeClientProvided: (optionId: string) => void;
   applyTemplateData: (clientProvided: string[], cartItems: CartItem[]) => void;
   applyGlobalTemplate: (templateId: string) => void;
+  applyDynamicSolution: (solution: any) => void; 
   updateStep1Data: (data: Partial<Step1Data>) => void;
   updateStep5Data: (data: Partial<Step5Data>) => void;
   resetWizard: () => void;
-  restoreDraft: (draftData: WizardState) => void; 
+  restoreDraft: (draftData: WizardState) => void;
 };
 
 const initialState: WizardState = {
-  currentStep: 0,
+  currentStep: 0, 
   clientProvided: [],
   cartItems: [],
   totalOneTime: 0,
@@ -129,15 +166,54 @@ const initialState: WizardState = {
   },
   step5Data: {
     selectedFunnel: ''
-  }
+  },
+  availableOffers: [],    
+  isLoadingOffers: true,  
 };
 
 const WizardContext = createContext<WizardContextType | undefined>(undefined);
 
+export const normalizeSharedResource = (name: string, optionId: string = '') => {
+  if (!name) return '';
+  const lower = name.toLowerCase();
+  
+  if (lower.includes('account executive') || lower.includes('ae') || lower.includes('closer')) return 'ae';
+  if (lower.includes('sdr') || lower.includes('sales development')) return 'sdr';
+  if (lower.includes('scout')) return 'scout';
+  if (lower.includes('team lead') || lower.includes('manager')) return 'team_lead';
+  
+  return `${lower}_${optionId}`;
+};
+
+export const getBaseId = (id: string) => {
+  return id.replace(/^(step\d_|competitor_intel_|partner_mou_)/, '');
+};
+
 export const WizardProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<WizardState>(initialState);
   const router = useRouter();
-  const pathname = usePathname(); // <-- Добавлено для работы с URL
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const response = await fetch('/api/offers');
+        if (response.ok) {
+          const offers: DatabaseOffer[] = await response.json();
+          setState(prev => ({
+            ...prev,
+            availableOffers: offers,
+            isLoadingOffers: false
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch offers from database", error);
+        setState(prev => ({ ...prev, isLoadingOffers: false }));
+      }
+    };
+
+    fetchOffers();
+  }, []);
 
   useEffect(() => {
     const evaluateRules = () => {
@@ -151,9 +227,11 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
         state.clientProvided.includes('lead_gen');
 
       const hasSalesForce = 
-        state.cartItems.some(i => ['sdr', 'closer', 'ai_sdr', 'scout_hire'].includes(i.optionId)) || 
-        state.clientProvided.includes('qualification') || 
-        state.clientProvided.includes('demo');
+        state.cartItems.some(i => {
+          const norm = normalizeSharedResource(i.name, i.optionId);
+          return norm === 'sdr' || norm === 'ae' || norm === 'scout';
+        }) || 
+        state.clientProvided.some(id => id.includes('qualification') || id.includes('demo'));
 
       const isArchitectureStarted = state.cartItems.length > 0 || state.clientProvided.length > 0 || state.step5Data.selectedFunnel !== '';
 
@@ -205,36 +283,44 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
   }, [state.cartItems, state.clientProvided, state.step1Data.methodology, state.step5Data.selectedFunnel]);
 
   const nextStep = () => {
-    setState((prev) => ({
-      ...prev,
-      currentStep: Math.min(prev.currentStep + 1, 8),
-    }));
+    setState((prev) => {
+      // Игнорируем шаг 5
+      const next = prev.currentStep === 4 ? 6 : prev.currentStep + 1;
+      return {
+        ...prev,
+        currentStep: Math.min(next, 8),
+      };
+    });
   };
 
   const prevStep = () => {
-    setState((prev) => ({
-      ...prev,
-      currentStep: Math.max(prev.currentStep - 1, 1),
-    }));
+    setState((prev) => {
+      // Игнорируем шаг 5 при возврате
+      const previous = prev.currentStep === 6 ? 4 : prev.currentStep - 1;
+      return {
+        ...prev,
+        currentStep: Math.max(previous, 0),
+      };
+    });
   };
 
   const setStep = (step: number) => {
     setState((prev) => ({
       ...prev,
-      currentStep: Math.max(1, Math.min(step, 8)),
+      currentStep: Math.max(0, Math.min(step, 8)),
     }));
   };
 
   const markClientProvided = (optionId: string) => {
     setState((prev) => {
-      const newCartItems = prev.cartItems.filter((i) => i.optionId !== optionId);
+      const baseId = getBaseId(optionId);
+      
+      const newCartItems = prev.cartItems.filter((i) => getBaseId(i.optionId) !== baseId);
+      
       const totalOneTime = newCartItems.filter(i => i.paymentType === 'one-time').reduce((acc, item) => acc + item.price, 0);
       const totalMonthly = newCartItems.filter(i => i.paymentType === 'monthly').reduce((acc, item) => acc + item.price, 0);
 
-      const isProvided = prev.clientProvided.includes(optionId);
-      const newClientProvided = isProvided
-        ? prev.clientProvided.filter((id) => id !== optionId)
-        : [...prev.clientProvided, optionId];
+      const newClientProvided = Array.from(new Set([...prev.clientProvided, optionId]));
 
       return {
         ...prev,
@@ -248,19 +334,24 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
 
   const addCartItem = (item: CartItem) => {
     setState((prev) => {
-      const newClientProvided = prev.clientProvided.filter(
-        (id) => id !== item.optionId,
-      );
+      const baseItemId = getBaseId(item.optionId);
       
-      const existingItem = prev.cartItems.find(
-        (i) => i.optionId === item.optionId,
-      );
-      const newCartItems = existingItem
-        ? prev.cartItems.filter((i) => i.optionId !== item.optionId)
-        : [...prev.cartItems, item];
+      const newClientProvided = prev.clientProvided.filter(id => getBaseId(id) !== baseItemId);
+      
+      const itemNorm = normalizeSharedResource(item.name, item.optionId);
+      
+      const newCartItems = prev.cartItems.filter(existing => {
+        if (existing.optionId === item.optionId) return false;
+        if (existing.category === item.category && normalizeSharedResource(existing.name, existing.optionId) === itemNorm) {
+          return false; 
+        }
+        return true;
+      });
+
+      newCartItems.push(item);
         
-      const totalOneTime = newCartItems.filter(i => i.paymentType === 'one-time').reduce((acc, item) => acc + item.price, 0);
-      const totalMonthly = newCartItems.filter(i => i.paymentType === 'monthly').reduce((acc, item) => acc + item.price, 0);
+      const totalOneTime = newCartItems.filter(i => i.paymentType === 'one-time').reduce((acc, i) => acc + i.price, 0);
+      const totalMonthly = newCartItems.filter(i => i.paymentType === 'monthly').reduce((acc, i) => acc + i.price, 0);
 
       return {
         ...prev,
@@ -323,79 +414,10 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
 
   const applyGlobalTemplate = (templateId: string) => {
     setState((prev) => {
-      let step1Data: Step1Data = { ...prev.step1Data };
+      let step1Data: Step1Data = { methodology: '', channels: [], acv: '', subscriptionModel: '' }; 
       let step5Data: Step5Data = { ...prev.step5Data };
       let cartItems: CartItem[] = [];
       let clientProvided: string[] = [];
-
-      if (templateId === 'founder_led') {
-        step1Data = { methodology: 'SPIN', channels: ['Cold Email', 'LinkedIn'], acv: '5000', subscriptionModel: 'recurring' };
-        step5Data = { selectedFunnel: 'outbound_cold_meeting' };
-        clientProvided = ['competitor_intel', 'closer', 'sales_ops'];
-        cartItems = [
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'ai_sdr', name: 'Buy AI SDR', price: 800, sla: '2 Days', category: 'service', purpose: 'Automated qualification of inbound traffic' },
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'outbound_parsing', name: 'Outbound Parsing', price: 1200, sla: '5 Days', category: 'service', purpose: 'Scraping targets from LinkedIn and other databases.' },
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'crm_enrichment', name: 'CRM Enrichment', price: 800, sla: '3 Days', category: 'service', purpose: 'Cleaning and updating old/existing databases.' }
-        ];
-      } else if (templateId === 'high_ticket') {
-        step1Data = { methodology: 'MEDDIC', channels: ['LinkedIn', 'Inbound'], acv: '50000', subscriptionModel: 'recurring' };
-        step5Data = { selectedFunnel: 'outbound_cold_meeting' };
-        clientProvided = [];
-        cartItems = [
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'competitor_intel', name: 'Buy Competitor Intel', price: 800, sla: '7 Days', category: 'service', purpose: 'Deep market and competitor analysis to position your offering.' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'sdr', name: 'Hire Human SDR', price: 3500, sla: '21 Days', category: 'hire', purpose: 'Vetting inbound and outbound leads for fit' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'closer', name: 'Hire AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Presentations, discovery calls, pricing and terms negotiation' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'sales_ops', name: 'SalesOps', price: 3000, sla: '14 Days', category: 'hire', purpose: 'Analytics and CRM management' }
-        ];
-      } else if (templateId === 'scale_up') {
-        step1Data = { methodology: 'Challenger', channels: ['Cold Email', 'Cold Calling', 'LinkedIn'], acv: '15000', subscriptionModel: 'recurring' };
-        step5Data = { selectedFunnel: 'outbound_cold_meeting' };
-        clientProvided = [];
-        cartItems = [
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'sdr', name: 'Hire Human SDR', price: 3500, sla: '21 Days', category: 'hire', purpose: 'Vetting inbound and outbound leads for fit' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'closer', name: 'Hire AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Presentations, discovery calls, pricing and terms negotiation' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'team_lead', name: 'Hire Team Lead', price: 4000, sla: '14 Days', category: 'hire', purpose: 'Analytics, contract signing, and management' },
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'outbound_parsing', name: 'Outbound Parsing', price: 1200, sla: '5 Days', category: 'service', purpose: 'Scraping targets from LinkedIn and other databases.' }
-        ];
-      } else if (templateId === 'inbound_closer') {
-        step1Data = { methodology: 'Other', channels: ['Inbound'], acv: '2000', subscriptionModel: 'one-time' };
-        step5Data = { selectedFunnel: 'inbound_demo_funnel' };
-        clientProvided = ['competitor_intel'];
-        cartItems = [
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'ai_sdr', name: 'Buy AI SDR', price: 800, sla: '2 Days', category: 'service', purpose: 'Automated qualification of inbound traffic' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'closer', name: 'Hire AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Presentations, discovery calls, pricing and terms negotiation' },
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'inbound_traffic', name: 'Inbound Traffic', price: 2500, sla: '10 Days', category: 'service', purpose: 'Setup of hot lead generation (paid ads, forms).' }
-        ];
-      } else if (templateId === 'turnkey') {
-        step1Data = { methodology: 'MEDDIC', channels: ['Cold Email', 'LinkedIn', 'Inbound'], acv: '25000', subscriptionModel: 'recurring' };
-        step5Data = { selectedFunnel: 'hybrid_funnel' };
-        clientProvided = [];
-        cartItems = [
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'sales_consulting', name: 'Sales Consulting', price: 1500, sla: '7 Days', category: 'service', purpose: 'For expert guidance in building your sales methodology' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'scout_hire', name: 'Hire Human Scout', price: 1500, sla: '14 Days', category: 'hire', purpose: 'Sourcing and initial outreach to build your pipeline' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'sdr', name: 'Hire Human SDR', price: 3500, sla: '21 Days', category: 'hire', purpose: 'Vetting inbound and outbound leads for fit' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'closer', name: 'Hire AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Presentations, discovery calls, pricing and terms negotiation' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'team_lead', name: 'Hire Team Lead', price: 4000, sla: '14 Days', category: 'hire', purpose: 'Analytics, contract signing, and management' }
-        ];
-      } else if (templateId === 'fundraising') {
-        step1Data = { methodology: 'Other', channels: ['Cold Email', 'LinkedIn'], acv: '1000000', subscriptionModel: 'one-time' };
-        step5Data = { selectedFunnel: 'outbound_cold_meeting' };
-        clientProvided = ['closer'];
-        cartItems = [
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'sales_deck', name: 'Sales Deck / Pitch Deck', price: 2500, sla: '14 Days', category: 'service', purpose: 'Visually stunning and persuasive presentation for meetings.' },
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'outbound_parsing', name: 'Outbound Parsing', price: 1200, sla: '5 Days', category: 'service', purpose: 'Scraping targets from LinkedIn and other databases.' },
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'legal_setup', name: 'Buy Legal Setup', price: 1200, sla: '5 Days', category: 'service', purpose: 'Legal and compliance setup for your sales operations' }
-        ];
-      } else if (templateId === 'cold_calling') {
-        step1Data = { methodology: 'SPIN', channels: ['Cold Calling'], acv: '10000', subscriptionModel: 'recurring' };
-        step5Data = { selectedFunnel: 'outbound_cold_meeting' };
-        clientProvided = ['competitor_intel'];
-        cartItems = [
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'sdr', name: 'Hire Human SDR', price: 3500, sla: '21 Days', category: 'hire', purpose: 'Vetting inbound and outbound leads for fit' },
-          { allocatedHours: 160, paymentType: 'monthly', optionId: 'closer', name: 'Hire AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Presentations, discovery calls, pricing and terms negotiation' },
-          { allocatedHours: 0, paymentType: 'one-time', optionId: 'outbound_parsing', name: 'Outbound Parsing', price: 1200, sla: '5 Days', category: 'service', purpose: 'Scraping targets from LinkedIn and other databases.' }
-        ];
-      }
 
       const totalOneTime = cartItems.filter(i => i.paymentType === 'one-time').reduce((acc, item) => acc + item.price, 0);
       const totalMonthly = cartItems.filter(i => i.paymentType === 'monthly').reduce((acc, item) => acc + item.price, 0);
@@ -408,7 +430,35 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
         clientProvided,
         totalOneTime,
         totalMonthly,
-        currentStep: 1 // <--- ИСПРАВЛЕНИЕ: Теперь шаблон кидает на 1-й шаг, а не на 8-й
+        currentStep: 1
+      };
+    });
+  };
+
+  const applyDynamicSolution = (solution: any) => {
+    setState((prev) => {
+      let step1Data: Step1Data = { methodology: '', channels: [], acv: '', subscriptionModel: '' };
+      let step5Data: Step5Data = { selectedFunnel: '' };
+      let clientProvided: string[] = [];
+      let cartItems: CartItem[] = [];
+
+      try { if (solution.step1Data) step1Data = { ...step1Data, ...JSON.parse(solution.step1Data) }; } catch(e) {}
+      try { if (solution.step5Data) step5Data = { ...step5Data, ...JSON.parse(solution.step5Data) }; } catch(e) {}
+      try { if (solution.clientProvided) clientProvided = JSON.parse(solution.clientProvided); } catch(e) {}
+      try { if (solution.cartItems) cartItems = JSON.parse(solution.cartItems); } catch(e) {}
+
+      const totalOneTime = cartItems.filter(i => i.paymentType === 'one-time').reduce((acc, item) => acc + item.price, 0);
+      const totalMonthly = cartItems.filter(i => i.paymentType === 'monthly').reduce((acc, item) => acc + item.price, 0);
+
+      return {
+        ...prev,
+        step1Data: { ...prev.step1Data, ...step1Data },
+        step5Data: { ...prev.step5Data, ...step5Data },
+        clientProvided,
+        cartItems,
+        totalOneTime,
+        totalMonthly,
+        currentStep: 1
       };
     });
   };
@@ -430,10 +480,9 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
   const resetWizard = () => {
     setState({
       ...initialState,
-      currentStep: 1 // <--- ИСПРАВЛЕНИЕ: Принудительно возвращаем на 1-й шаг
+      currentStep: 0 
     });
     
-    // ИСПРАВЛЕНИЕ: Очищаем URL (чтобы убрать ?preset=), чтобы шаблон не применился заново
     router.replace(pathname);
     
     if (typeof window !== 'undefined') {
@@ -458,6 +507,7 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
         removeClientProvided,
         applyTemplateData,
         applyGlobalTemplate,
+        applyDynamicSolution,
         updateStep1Data,
         updateStep5Data,
         resetWizard,

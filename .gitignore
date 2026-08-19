@@ -41,3 +41,11 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Large local image assets (kept outside Git)
+/public/images/
+/public/solutions/
+
+.vercel
+"*.db" 
+".next/" 

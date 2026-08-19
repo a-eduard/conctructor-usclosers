@@ -1,272 +1,106 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useWizard, DIY_HOURS_MAP, CartItem } from "../contexts/WizardContext";
-import { ArrowDown, Bot, User, Settings, AlertTriangle, ChevronDown, Briefcase, TrendingUp, Magnet, DollarSign, Phone, CheckCircle2, Check, Clock, Zap } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
+import { useWizard } from "../contexts/WizardContext";
+import { 
+  User, 
+  Settings, 
+  AlertTriangle, 
+  ChevronDown, 
+  Zap, 
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  ArrowLeft,
+  Users
+} from "lucide-react";
 
-const FUNNEL_STAGES = [
-  {
-    id: 'lead_gen',
-    name: 'Lead Generation',
-    desc: 'Sourcing and initial outreach to build your pipeline.',
-    tasks: [
-      'Sourcing target contacts and finding decision-makers (Scouting)',
-      'Data enrichment (email and phone validation)',
-      'Technical infrastructure setup (domain warmup)',
-      'Launching initial outreach (Cold Email / LinkedIn)'
-    ],
-    hire: { hours: 160, 
-      id: 'scout_hire', 
-      baseName: 'Human Scout',
-      name: 'Hire Human Scout', 
-      price: 1500, 
-      sla: '14 Days', 
-      category: 'hire', 
-      purpose: 'Sourcing and initial outreach to build your pipeline',
-      defaultGrade: 'expert',
-      grades: [
-        { level: 'intern', label: 'Intern', price: 500, sla: '21 Days' },
-        { level: 'junior', label: 'Junior', price: 1000, sla: '14 Days' },
-        { level: 'expert', label: 'Expert', price: 1500, sla: '14 Days' },
-        { level: 'pro', label: 'Pro', price: 3000, sla: '7 Days' }
-      ]
-    },
-    hireIds: ['scout_hire'],
-    service: { hours: 160, id: 'agency_leadgen', name: 'Buy Agency LeadGen', price: 1000, sla: '7 Days', category: 'service', purpose: 'Sourcing and initial outreach to build your pipeline' },
-    serviceIds: ['agency_leadgen', 'parsing', 'agency_leadgen_parsing', 'parsing_enrichment']
-  },
-  {
-    id: 'qualification',
-    name: 'Qualification',
-    desc: 'Vetting inbound and outbound leads for fit.',
-    tasks: [
-      'Instant processing of inbound leads (Inbound SLA < 5 min)',
-      'Cold calling and gatekeeper navigation',
-      'Lead qualification by business criteria (BANT / MEDDIC)',
-      'Schedule synchronization and calendar meeting booking'
-    ],
-    hire: { hours: 160, 
-      id: 'sdr', 
-      baseName: 'Human SDR',
-      name: 'Hire Human SDR', 
-      price: 3500, 
-      sla: '21 Days', 
-      category: 'hire', 
-      purpose: 'Vetting inbound and outbound leads for fit',
-      defaultGrade: 'expert',
-      grades: [
-        { level: 'intern', label: 'Intern', price: 1500, sla: '28 Days' },
-        { level: 'junior', label: 'Junior', price: 2500, sla: '21 Days' },
-        { level: 'expert', label: 'Expert', price: 3500, sla: '21 Days' },
-        { level: 'pro', label: 'Pro', price: 6000, sla: '14 Days' }
-      ]
-    },
-    hireIds: ['sdr'],
-    service: { hours: 160, id: 'ai_sdr', name: 'Buy AI SDR', price: 800, sla: '2 Days', category: 'service', purpose: 'Vetting inbound and outbound leads for fit' },
-    serviceIds: ['ai_sdr']
-  },
-  {
-    id: 'demo',
-    name: 'Discovery / Demo',
-    desc: 'Presentations and discovery calls.',
-    tasks: [
-      'Conducting in-depth interviews (Discovery) to identify pain points',
-      'Personalized product presentation (Demo) tailored to the client\'s case',
-      'Objection handling ("Too expensive", "Too complex", "Already have a vendor")',
-      'Sending follow-up materials (Pitch deck, case studies) after the call'
-    ],
-    hire: { hours: 160, 
-      id: 'closer', 
-      baseName: 'AE',
-      name: 'Hire AE', 
-      price: 5000, 
-      sla: '30 Days', 
-      category: 'hire', 
-      purpose: 'Presentations, discovery calls, pricing and terms negotiation',
-      defaultGrade: 'expert',
-      grades: [
-        { level: 'intern', label: 'Intern', price: 2500, sla: '45 Days' },
-        { level: 'junior', label: 'Junior', price: 3500, sla: '30 Days' },
-        { level: 'expert', label: 'Expert', price: 5000, sla: '30 Days' },
-        { level: 'pro', label: 'Pro', price: 8000, sla: '14 Days' }
-      ]
-    },
-    hireIds: ['closer'],
-    service: null,
-    serviceIds: []
-  },
-  {
-    id: 'negotiation',
-    name: 'Negotiation & Proposal',
-    desc: 'Pricing and terms negotiation.',
-    tasks: [
-      'Preparation and issuing of commercial proposals (CPQ)',
-      'Defending product value and negotiating possible discounts',
-      'Aligning on legal aspects (NDA, Terms of Service)',
-      'Systematic client follow-ups until the final decision'
-    ],
-    hire: { hours: 160, 
-      id: 'closer', 
-      baseName: 'AE',
-      name: 'Hire AE', 
-      price: 5000, 
-      sla: '30 Days', 
-      category: 'hire', 
-      purpose: 'Presentations, discovery calls, pricing and terms negotiation',
-      defaultGrade: 'expert',
-      grades: [
-        { level: 'intern', label: 'Intern', price: 2500, sla: '45 Days' },
-        { level: 'junior', label: 'Junior', price: 3500, sla: '30 Days' },
-        { level: 'expert', label: 'Expert', price: 5000, sla: '30 Days' },
-        { level: 'pro', label: 'Pro', price: 8000, sla: '14 Days' }
-      ]
-    }, // shared ID deduplication
-    hireIds: ['closer'],
-    service: { hours: 160, id: 'legal_setup', name: 'Buy Legal Setup', price: 1200, sla: '5 Days', category: 'service', purpose: 'Legal and compliance setup for your sales operations' },
-    serviceIds: ['legal_setup']
-  },
-  {
-    id: 'closed_won_lost',
-    name: 'Closed Won / Lost',
-    desc: 'Analytics, contract signing, and management.',
-    tasks: [
-      'Contract signing and invoicing',
-      'Seamless handoff of the client to the fulfillment team (Onboarding)',
-      'Loss analysis for lost deals',
-      'Digitizing sales metrics (Conversions, CAC, activity) in CRM'
-    ],
-    hire: { hours: 160, 
-      id: 'team_lead', 
-      baseName: 'Team Lead',
-      name: 'Hire Team Lead', 
-      price: 4000, 
-      sla: '14 Days', 
-      category: 'hire', 
-      purpose: 'Analytics, contract signing, and management',
-      defaultGrade: 'expert',
-      grades: [
-        { level: 'intern', label: 'Intern', price: 2000, sla: '28 Days' },
-        { level: 'junior', label: 'Junior', price: 3000, sla: '21 Days' },
-        { level: 'expert', label: 'Expert', price: 4000, sla: '14 Days' },
-        { level: 'pro', label: 'Pro', price: 7000, sla: '7 Days' }
-      ]
-    },
-    hireIds: ['team_lead', 'sales_ops'],
-    service: null,
-    serviceIds: []
-  }
-];
+// The unified dictionary to link roles together across blocks
+const normalizeSharedResource = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower.includes('account executive') || lower.includes('ae') || lower.includes('closer')) return 'ae';
+  if (lower.includes('sdr') || lower.includes('sales development')) return 'sdr';
+  if (lower.includes('scout')) return 'scout';
+  if (lower.includes('team lead') || lower.includes('manager')) return 'team_lead';
+  return lower.replace(/^(buy |hire )/i, '').split('(')[0].trim();
+};
 
-const TEMPLATES = [
-  {
-    id: 'founder_led',
-    name: 'Founder-Led Automation',
-    desc: 'Parsing -> AI SDR -> Founder -> Founder -> Founder.',
-    icon: User,
-    clientProvided: ['demo', 'negotiation', 'closed_won_lost'],
-    cartItems: [
-      { optionId: 'parsing', name: 'Parsing Service', price: 800, sla: '3 Days', category: 'service', purpose: 'Data parsing and organization' },
-      { optionId: 'ai_sdr', name: 'AI SDR', price: 800, sla: '2 Days', category: 'service', purpose: 'Automated lead qualification' }
-    ]
-  },
-  {
-    id: 'high_ticket',
-    name: 'High-Ticket Enterprise',
-    desc: 'Scout -> Scout -> Senior Closer -> Senior Closer -> Founder.',
-    icon: Briefcase,
-    clientProvided: ['closed_won_lost'],
-    cartItems: [
-      { optionId: 'scout_hire', name: 'Human Scout', price: 1500, sla: '14 Days', category: 'hire', purpose: 'Lead generation and initial outreach' },
-      { optionId: 'sdr', name: 'Human SDR', price: 3500, sla: '21 Days', category: 'hire', purpose: 'Qualifying enterprise leads' },
-      { optionId: 'closer', name: 'AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Enterprise deal closing' }
-    ]
-  },
-  {
-    id: 'scale_up',
-    name: 'The Scale-Up Machine',
-    desc: 'LeadGen -> SDR -> Closer -> Closer -> Team Lead.',
-    icon: TrendingUp,
-    clientProvided: [],
-    cartItems: [
-      { optionId: 'agency_leadgen', name: 'Agency LeadGen', price: 1000, sla: '7 Days', category: 'service', purpose: 'Outsourced lead generation' },
-      { optionId: 'sdr', name: 'Human SDR', price: 3500, sla: '21 Days', category: 'hire', purpose: 'Lead qualification and setting appointments' },
-      { optionId: 'closer', name: 'AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Running demos and closing deals' },
-      { optionId: 'team_lead', name: 'Team Lead', price: 4000, sla: '14 Days', category: 'hire', purpose: 'Managing the sales team and operations' }
-    ]
-  },
-  {
-    id: 'inbound_closer',
-    name: 'Inbound Closer',
-    desc: 'Founder (Traffic) -> AI SDR -> Closer -> Closer -> SalesOps.',
-    icon: Magnet,
-    clientProvided: ['lead_gen'],
-    cartItems: [
-      { optionId: 'ai_sdr', name: 'AI SDR', price: 800, sla: '2 Days', category: 'service', purpose: 'Automated qualification of inbound traffic' },
-      { optionId: 'closer', name: 'AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Running demos and closing inbound deals' },
-      { optionId: 'sales_ops', name: 'SalesOps', price: 3000, sla: '14 Days', category: 'hire', purpose: 'Analytics and CRM management' }
-    ]
-  },
-  {
-    id: 'turnkey',
-    name: 'Turnkey Department',
-    desc: 'LeadGen + Parsing -> SDR -> Closer -> Closer -> Team Lead.',
-    icon: Settings,
-    clientProvided: [],
-    cartItems: [
-      { optionId: 'agency_leadgen_parsing', name: 'LeadGen + Parsing', price: 1500, sla: '7 Days', category: 'service', purpose: 'End-to-end lead generation and data processing' },
-      { optionId: 'sdr', name: 'Human SDR', price: 3500, sla: '21 Days', category: 'hire', purpose: 'Qualifying provided leads' },
-      { optionId: 'closer', name: 'AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Closing qualified opportunities' },
-      { optionId: 'team_lead', name: 'Team Lead', price: 4000, sla: '14 Days', category: 'hire', purpose: 'Overseeing the entire sales cycle' }
-    ]
-  },
-  {
-    id: 'fundraising',
-    name: 'Fundraising Pipeline',
-    desc: 'Parsing -> Scout -> Founder -> Founder -> Founder.',
-    icon: DollarSign,
-    clientProvided: ['demo', 'negotiation', 'closed_won_lost'],
-    cartItems: [
-      { optionId: 'parsing', name: 'Parsing Service', price: 800, sla: '3 Days', category: 'service', purpose: 'Investor data parsing and organization' },
-      { optionId: 'sdr', name: 'Human SDR (Scout)', price: 3500, sla: '21 Days', category: 'hire', purpose: 'Initial outreach and meeting booking' }
-    ]
-  },
-  {
-    id: 'cold_calling',
-    name: 'Cold Calling Machine',
-    desc: 'Parsing + Enrichment -> SDR -> Closer -> Closer -> Team Lead.',
-    icon: Phone,
-    clientProvided: [],
-    cartItems: [
-      { optionId: 'parsing_enrichment', name: 'Parsing + Enrichment', price: 1200, sla: '5 Days', category: 'service', purpose: 'Data enrichment and parsing for cold campaigns' },
-      { optionId: 'sdr', name: 'Human SDR', price: 3500, sla: '21 Days', category: 'hire', purpose: 'High-volume cold calling and qualification' },
-      { optionId: 'closer', name: 'AE', price: 5000, sla: '30 Days', category: 'hire', purpose: 'Running demos and closing deals' },
-      { optionId: 'team_lead', name: 'Team Lead', price: 4000, sla: '14 Days', category: 'hire', purpose: 'Managing operations and performance' }
-    ]
-  }
-];
-
-export function Step2TeamStructure() {
-  const { state, markClientProvided, addCartItem, removeCartItem, removeClientProvided, applyTemplateData } = useWizard();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+export function Step2TeamStructure({ dbSteps, isSummaryMode = false }: { dbSteps?: any[], isSummaryMode?: boolean }) {
+  const { state, nextStep, markClientProvided, addCartItem, removeCartItem, removeClientProvided } = useWizard();
   
-  const [selectedGrades, setSelectedGrades] = useState<Record<string, string>>({});
-  const [openHireDropdown, setOpenHireDropdown] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'intro' | 'content' | 'outro'>('intro');
   const [expandedStageId, setExpandedStageId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [openHireDropdown, setOpenHireDropdown] = useState<string | null>(null);
+  const [selectedGrades, setSelectedGrades] = useState<Record<string, string>>({});
   const [errorStageId, setErrorStageId] = useState<string | null>(null);
 
+  const stepData = dbSteps?.find(step => step.stepNumber === 2);
+  const dbBlocksRaw = stepData?.blocks || [];
+  
+  const dbBlocksRawString = JSON.stringify(dbBlocksRaw);
+
+  const dbBlocks = useMemo(() => {
+    if (!dbBlocksRaw.length) return [];
+    
+    return dbBlocksRaw.map((block: any) => {
+      const enrichedOptions = block.options.map((option: any) => {
+        const enrichedOption = { ...option };
+        if (enrichedOption.grades && typeof enrichedOption.grades === 'string') {
+           try {
+              enrichedOption.grades = JSON.parse(enrichedOption.grades);
+              enrichedOption.defaultGrade = enrichedOption.grades[2]?.level || enrichedOption.grades[0]?.level;
+           } catch(e) {
+              console.error("Failed to parse grades for", option.name);
+           }
+        }
+        return enrichedOption;
+      });
+      return { ...block, options: enrichedOptions };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbBlocksRawString]);
+
   useEffect(() => {
+    if (dbBlocks.length > 0 && !isInitialized) {
+      if (!isSummaryMode) {
+        setExpandedStageId(dbBlocks[0].id);
+      } else {
+        setViewMode('content');
+      }
+      setIsInitialized(true);
+    }
+  }, [dbBlocks, isInitialized, isSummaryMode]);
+
+  useEffect(() => {
+    if (expandedStageId && !isSummaryMode && viewMode === 'content') {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const element = document.getElementById(`diy-item-${expandedStageId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 10);
+      });
+    }
+  }, [expandedStageId, isSummaryMode, viewMode]);
+
+  useEffect(() => {
+    if (isSummaryMode) return;
     const handleTriggerError = (e: any) => {
       const elementId = e.detail;
       const element = document.getElementById(elementId);
       if (element) {
         const stageId = elementId.replace('diy-item-', '');
         setExpandedStageId(stageId);
+        setViewMode('content');
         
-        setTimeout(() => {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 50);
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 10);
+        });
         
         setErrorStageId(stageId);
         setTimeout(() => setErrorStageId(null), 2500);
@@ -274,30 +108,10 @@ export function Step2TeamStructure() {
     };
     window.addEventListener('trigger-error-highlight', handleTriggerError as EventListener);
     return () => window.removeEventListener('trigger-error-highlight', handleTriggerError as EventListener);
-  }, []);
-
-  useEffect(() => {
-    // If no template selected and no step 2 data, set default
-    const step2StageIds = ['lead_gen', 'qualification', 'demo', 'negotiation', 'closed_won_lost'];
-    const step2ItemIds = ['scout_hire', 'agency_leadgen', 'sdr', 'ai_sdr', 'closer', 'legal_setup', 'team_lead', 'sales_ops', 'parsing', 'agency_leadgen_parsing', 'parsing_enrichment'];
-    
-    const hasStep2Data = state.clientProvided.some(id => step2StageIds.includes(id)) || 
-                         state.cartItems.some(i => step2ItemIds.includes(i.optionId));
-                         
-    if (!hasStep2Data && selectedTemplateId === null) {
-      const defaultTemplate = TEMPLATES.find(t => t.id === 'founder_led');
-      if (defaultTemplate) {
-        applyTemplateData(defaultTemplate.clientProvided, defaultTemplate.cartItems as CartItem[]);
-        setSelectedTemplateId('founder_led');
-      }
-    }
-  }, [state.clientProvided, state.cartItems, selectedTemplateId, applyTemplateData]);
+  }, [isSummaryMode]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
       if (!(event.target as Element).closest('.hire-dropdown-container')) {
         setOpenHireDropdown(null);
       }
@@ -305,315 +119,549 @@ export function Step2TeamStructure() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  
-  const getSelection = (stageId: string) => {
-    if (state.clientProvided.includes(stageId)) return 'myself';
-    const stage = FUNNEL_STAGES.find(s => s.id === stageId);
-    if (stage?.serviceIds?.some(id => state.cartItems.some(i => i.optionId === id))) return 'service';
-    if (stage?.hireIds?.some(id => state.cartItems.some(i => i.optionId === id))) {
-      // Special deduplication case for closer
-      if (stage.hireIds.includes('closer')) {
-         return 'hire';
+
+  const getBaseName = (name: string) => name.startsWith('Hire ') ? name.substring(5).trim() : name.trim();
+
+  const getCartItemForOption = (option: any) => {
+    return state.cartItems.find((i: any) => {
+      if (i.optionId === option.id) return true; 
+      
+      if (i.category === option.type && (option.type === 'hire' || option.type === 'service')) {
+         return normalizeSharedResource(i.name) === normalizeSharedResource(option.name);
       }
-      return 'hire';
-    }
-    return null;
+      return false;
+    });
   };
 
-  const handleDeselect = (stageId: string) => {
-    const stage = FUNNEL_STAGES.find(s => s.id === stageId);
-    if (!stage) return;
-    
-    if (stage.hireIds?.includes('closer')) {
-      const otherStageId = stageId === 'demo' ? 'negotiation' : 'demo';
-      const otherSelection = getSelection(otherStageId);
-      if (otherSelection !== 'hire') {
-        removeCartItem('closer');
-      }
+  const isOptionActive = (option: any) => {
+    if (option.type === 'service' || option.type === 'hire') {
+      return !!getCartItemForOption(option);
+    }
+    if (option.type === 'myself') {
+      return state.clientProvided.includes(`step2_${option.id}`);
+    }
+    return false;
+  };
+
+  const getActiveOption = (block: any) => {
+    const myselfOption = block.options.find((o: any) => o.type === 'myself' && state.clientProvided.includes(`step2_${o.id}`));
+    if (myselfOption) return myselfOption;
+
+    return block.options.find((o: any) => isOptionActive(o));
+  };
+
+  const removeSelection = (block: any, optionToRemove: any) => {
+    if (optionToRemove.type === 'myself') {
+      removeClientProvided(`step2_${optionToRemove.id}`);
     } else {
-      if (stage.hireIds) stage.hireIds.forEach(id => removeCartItem(id));
+      const cartItem = getCartItemForOption(optionToRemove);
+      if (cartItem) {
+        removeCartItem(cartItem.optionId);
+      }
     }
-    if (stage.serviceIds) stage.serviceIds.forEach(id => removeCartItem(id));
-    removeClientProvided(stageId);
   };
 
-  const handleSelect = (stageId: string, type: 'myself' | 'hire' | 'service') => {
-    const stage = FUNNEL_STAGES.find(s => s.id === stageId);
-    if (!stage) return;
-    
-    const current = getSelection(stageId);
-    
-    if (type === 'hire') {
-      if (current === 'hire') {
-         // Deselect if already hired and clicked again
-         handleDeselect(stageId);
-      } else {
-         setOpenHireDropdown(openHireDropdown === stageId ? null : stageId);
+  const handleSelect = (block: any, option: any) => {
+    if (isSummaryMode) return;
+    const currentActive = getActiveOption(block);
+    const isActive = currentActive?.id === option.id || isOptionActive(option);
+
+    if (option.type === 'hire') {
+      if (!isActive) {
+        if (currentActive) removeSelection(block, currentActive);
+        
+        const defaultGradeLevel = selectedGrades[option.id] || option.defaultGrade;
+        const activeGrade = option.grades?.find((g: any) => g.level === defaultGradeLevel) || option.grades?.[0];
+        const baseName = getBaseName(option.name);
+
+        addCartItem({ 
+          ...option, 
+          optionId: option.id, 
+          name: activeGrade ? `${baseName} (${activeGrade.label})` : baseName,
+          price: activeGrade?.price || option.price,
+          sla: activeGrade?.sla || option.sla,
+          allocatedHours: 160,
+          paymentType: 'monthly',
+          category: 'hire' 
+        });
       }
+      setOpenHireDropdown(openHireDropdown === option.id ? null : option.id);
       return;
     }
     
-    if (current === type) {
-       // Deselect if clicking the currently active option
-       handleDeselect(stageId);
-       return;
+    if (isActive) {
+      removeSelection(block, option);
+      return;
     }
 
-    handleDeselect(stageId);
-    
-    if (type === 'myself') {
-      markClientProvided(stageId);
-      setExpandedStageId(null);
-    } else if (type === 'service' && stage.service) {
-      addCartItem({ ...stage.service, optionId: stage.service.id, allocatedHours: stage.service.hours, paymentType: 'monthly' } as any);
-      setExpandedStageId(null);
+    if (currentActive) {
+      removeSelection(block, currentActive);
     }
-  };
 
-  const handleGradeSelect = (stageId: string, hireId: string, level: string) => {
-    setSelectedGrades(prev => ({ ...prev, [hireId]: level }));
-    const stage = FUNNEL_STAGES.find(s => s.id === stageId);
-    if (stage?.hire) {
-      const gradeInfo = stage.hire.grades.find(g => g.level === level) || stage.hire.grades[2];
-      
-      if (stage.hireIds) stage.hireIds.forEach(id => removeCartItem(id));
-      if (stage.serviceIds) stage.serviceIds.forEach(id => removeCartItem(id));
-      removeClientProvided(stageId);
-      
+    if (option.type === 'myself') {
+      markClientProvided(`step2_${option.id}`);
+    } else {
       addCartItem({ 
-        ...stage.hire, 
-        optionId: stage.hire.id,
-        name: `${stage.hire.baseName} ${gradeInfo.label}`,
-        price: gradeInfo.price,
-        sla: gradeInfo.sla,
-        allocatedHours: stage.hire.hours, 
-        paymentType: 'monthly' 
-      } as any);
+        ...option, 
+        optionId: option.id, 
+        allocatedHours: 160,
+        paymentType: 'monthly',
+        category: option.type 
+      });
     }
-    setOpenHireDropdown(null);
-    setExpandedStageId(null);
   };
 
-  // Smart Rule: Lost Boss Trigger
-  const hasSdr = state.cartItems.some(i => i.optionId === 'sdr');
-  const hasCloser = state.cartItems.some(i => i.optionId === 'closer');
-  const isLostBoss = hasSdr && hasCloser && state.clientProvided.includes('closed_won_lost');
+  const handleGradeSelect = (block: any, option: any, grade: any) => {
+    if (isSummaryMode) return;
+    setSelectedGrades(prev => ({ ...prev, [option.id]: grade.level }));
 
+    const currentActive = getActiveOption(block);
+    if (currentActive && currentActive.id !== option.id) {
+      removeSelection(block, currentActive);
+    }
+    
+    const existingCartItem = getCartItemForOption(option);
+    if (existingCartItem) {
+      removeCartItem(existingCartItem.optionId);
+    }
+    
+    const baseName = getBaseName(option.name);
+
+    addCartItem({ 
+      ...option, 
+      optionId: option.id,
+      name: `${baseName} (${grade.label})`,
+      price: grade.price,
+      sla: grade.sla,
+      allocatedHours: 160, 
+      paymentType: 'monthly',
+      category: 'hire'
+    });
+    setOpenHireDropdown(null);
+  };
+
+  const isBlockCompleted = (block: any) => {
+    return !!getActiveOption(block);
+  };
+
+  const getActiveDetails = (block: any) => {
+    const activeOption = getActiveOption(block);
+    if (activeOption) {
+      let bullets: string[] = [];
+      try { 
+        bullets = activeOption.bullets ? JSON.parse(activeOption.bullets) : []; 
+      } catch (e) { 
+        bullets = activeOption.bullets ? activeOption.bullets.split('\n').filter(Boolean) : []; 
+      }
+      return { bullets };
+    }
+    
+    let defaultBullets: string[] = [];
+    if (block.description) {
+       defaultBullets = block.description.split('\n').filter(Boolean);
+    }
+    return {
+      bullets: defaultBullets.length > 0 ? defaultBullets : ['Please select an option above to view details.']
+    };
+  };
+
+  const getActiveImage = (block: any) => {
+    const activeOption = getActiveOption(block);
+    if (activeOption && activeOption.imageUrl) return activeOption.imageUrl;
+    if (block.imageUrl) return block.imageUrl;
+    return 'team-lead_gen.png'; 
+  };
+
+  const getActiveGradeLabel = (option: any) => {
+    const cartItem = getCartItemForOption(option);
+    if (cartItem && cartItem.name.includes('(')) {
+      const match = cartItem.name.match(/\(([^)]+)\)/);
+      if (match) return match[1];
+    }
+    return option.grades?.find((g: any) => g.level === (selectedGrades[option.id] || option.defaultGrade))?.label;
+  };
+
+  const handleAdvance = (currentIndex: number) => {
+    if (currentIndex < dbBlocks.length - 1) {
+      setExpandedStageId(dbBlocks[currentIndex + 1].id);
+    } else {
+      setExpandedStageId(null);
+      setViewMode('outro');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const hireCount = state.cartItems.filter(i => i.category === 'hire').length;
+  const isLostBoss = hireCount >= 2 && state.clientProvided.some(id => id.includes('step2'));
+
+  if (!dbBlocks.length) {
+    return <div className="text-center p-8 text-slate-500">Loading Configuration...</div>;
+  }
+
+  // --- INTRO SCREEN ---
+  if (viewMode === 'intro' && !isSummaryMode) {
+    return (
+      <div className="bg-white dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-[24px] p-6 sm:p-8 md:p-16 text-center flex flex-col items-center justify-center animate-in fade-in duration-500 shadow-sm max-w-4xl mx-auto min-h-[400px]">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mb-6 shadow-inner">
+          <Users className="w-10 h-10 sm:w-12 sm:h-12" />
+        </div>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
+          Team Structure
+        </h2>
+        <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg max-w-xl mb-10 leading-relaxed font-medium">
+          Let's define who will execute your sales strategy. Configure your manual efforts, new hires, or delegated services for each stage of the pipeline.
+        </p>
+        <button 
+          onClick={() => {
+            setViewMode('content');
+          }}
+          className="w-full sm:w-auto px-6 sm:px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-base sm:text-lg rounded-xl transition-colors shadow-md flex items-center justify-center gap-3"
+        >
+          Start Configuration
+          <ArrowRight className="w-5 h-5" />
+        </button>
+      </div>
+    );
+  }
+
+  // --- OUTRO SCREEN ---
+  if (viewMode === 'outro' && !isSummaryMode) {
+    return (
+      <div className="bg-white dark:bg-slate-900/80 backdrop-blur-md border border-emerald-200 dark:border-emerald-500/30 rounded-[24px] p-6 sm:p-8 md:p-16 text-center flex flex-col items-center justify-center animate-in fade-in duration-500 shadow-sm max-w-4xl mx-auto min-h-[400px]">
+        <div className="relative mb-8">
+          <div className="absolute inset-0 bg-emerald-400 opacity-20 blur-2xl rounded-full"></div>
+          <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 rounded-full flex items-center justify-center shadow-inner border border-emerald-100 dark:border-emerald-500/20">
+            <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12" />
+          </div>
+        </div>
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
+          Congratulations!
+        </h2>
+        <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg max-w-xl mb-10 leading-relaxed font-medium">
+          You've successfully configured your Team Structure. Let's move forward to build your Sales Materials.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+          <button 
+            onClick={() => {
+              setViewMode('content');
+            }}
+            className="w-full sm:w-auto px-6 py-4 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-extrabold text-base rounded-xl transition-colors shadow-sm border-2 border-indigo-100 dark:border-slate-700 flex items-center justify-center gap-2"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Review Choices
+          </button>
+          <button 
+            onClick={() => nextStep()}
+            className="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-base sm:text-lg rounded-xl transition-colors shadow-md flex items-center justify-center gap-3"
+          >
+            Next Step
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- CONTENT SCREEN ---
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {isLostBoss && (
-        <div className="mb-10 p-5 bg-amber-50 dark:bg-amber-500/10 border-l-4 border-amber-500 rounded-r-2xl flex items-start gap-4 shadow-sm animate-in fade-in zoom-in-95 duration-300">
-          <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0" />
-          <p className="text-sm text-amber-900 dark:text-amber-200 font-semibold leading-relaxed">
-            Warning: Managing 2+ people takes up to 20h/week. Consider adding a Team Lead in the Closed Won / Lost stage.
+    <div className="animate-in fade-in duration-500">
+      {isLostBoss && !isSummaryMode && (
+        <div className="mb-8 sm:mb-10 p-4 sm:p-5 bg-amber-50 dark:bg-amber-500/10 border-l-4 border-amber-500 rounded-r-2xl flex items-start gap-3 sm:gap-4 shadow-sm animate-in fade-in duration-300">
+          <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-xs sm:text-sm text-amber-900 dark:text-amber-200 font-semibold leading-relaxed">
+            Warning: Managing multiple hired reps takes time. Consider adding a Team Lead if you are handling operations yourself.
           </p>
         </div>
       )}
 
-      <div className="space-y-8 relative">
-        <div className="absolute left-[38px] xl:left-[42px] top-10 bottom-10 w-0.5 bg-slate-200 dark:bg-slate-800 -z-10 hidden md:block" />
-        
-        {FUNNEL_STAGES.map((stage, idx) => {
-          const selection = getSelection(stage.id);
-          const isExpanded = expandedStageId === stage.id;
+      <div className="space-y-4 relative max-w-4xl mx-auto">
+        {dbBlocks.map((block: any, idx: number) => {
+          const isCompleted = isBlockCompleted(block);
+          const isExpanded = expandedStageId === block.id && !isSummaryMode;
+          const displayInfo = getActiveDetails(block);
+          const activeImage = getActiveImage(block);
+          const activeOption = getActiveOption(block);
+
+          // Strictly sort options: myself -> hire -> service
+          const sortedOptions = [...block.options].sort((a, b) => {
+            const weight = (type: string) => {
+              if (type === 'myself') return 1;
+              if (type === 'hire') return 2;
+              if (type === 'service') return 3;
+              return 4;
+            };
+            return weight(a.type) - weight(b.type);
+          });
+
+          if (isSummaryMode) {
+             return (
+               <div key={block.id} className="bg-white dark:bg-slate-900/80 backdrop-blur-md border border-emerald-200 dark:border-emerald-500/30 rounded-[16px] overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:px-6">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">{block.name}</h3>
+                    </div>
+                  </div>
+                  
+                  <div className="shrink-0 flex items-center justify-start sm:justify-end min-w-0">
+                    {activeOption ? (
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] sm:text-xs font-bold shrink-0 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                          {activeOption.type === 'myself' && <Settings className="w-3.5 h-3.5" />}
+                          {activeOption.type === 'hire' && <User className="w-3.5 h-3.5" />}
+                          {activeOption.type === 'service' && <Zap className="w-3.5 h-3.5" />}
+                          <span className="truncate max-w-[100px] md:max-w-[150px] uppercase tracking-wide">
+                            {activeOption.type === 'myself' ? activeOption.name :
+                             activeOption.type === 'hire' ? `${getBaseName(activeOption.name)} (${getActiveGradeLabel(activeOption)})` :
+                             activeOption.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] sm:text-xs font-mono font-bold shrink-0 bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                          {activeOption.type === 'myself' ? '$0/m' : `+$${(getCartItemForOption(activeOption)?.price || 0).toLocaleString()}/m`}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wide">Pending</span>
+                    )}
+                  </div>
+               </div>
+             );
+          }
           
           return (
-            <div key={stage.id} id={`diy-item-${stage.id}`} className={`relative group scroll-m-24 transition-all duration-300 ${openHireDropdown === stage.id ? 'z-50' : 'z-10'}`}>
-              {idx !== 0 && (
-                <div className="absolute -top-6 left-[28px] xl:left-[32px] bottom-auto flex items-center justify-center hidden md:flex">
-                  <ArrowDown className="w-6 h-6 text-slate-300 dark:text-slate-700 group-hover:text-indigo-300 dark:group-hover:text-indigo-700 transition-colors" />
-                </div>
-              )}
-              
+            <div key={block.id} id={`diy-item-${block.id}`} className={`relative group scroll-m-32 transition-colors duration-300 ${openHireDropdown === block.options.find((o:any)=>o.type==='hire')?.id ? 'z-50' : 'z-10'}`}>
               <div 
-                onClick={() => !isExpanded && setExpandedStageId(stage.id)}
-                className={`bg-white dark:bg-slate-900/80 backdrop-blur-md border rounded-2xl shadow-sm transition-all duration-300 ${
-                  errorStageId === stage.id
-                    ? 'border-red-400 ring-4 ring-red-400/30 bg-red-50/20 dark:bg-red-500/10 animate-[pulse_1s_ease-in-out_2] p-6'
+                onClick={() => !isExpanded && setExpandedStageId(block.id)}
+                className={`bg-white dark:bg-slate-900/80 backdrop-blur-md border rounded-[20px] transition-colors duration-300 overflow-hidden ${
+                  errorStageId === block.id
+                    ? 'border-red-400 ring-2 ring-red-400/30 bg-red-50/20 dark:bg-red-500/10'
                     : isExpanded 
-                      ? 'border-indigo-200 dark:border-indigo-500/30 shadow-md ring-1 ring-indigo-50 dark:ring-indigo-900/20 p-6' 
-                      : 'border-slate-200 dark:border-slate-800/60 hover:border-indigo-100 dark:hover:border-indigo-500/30 hover:shadow-md cursor-pointer p-4 md:p-6'
+                      ? 'border-indigo-300 dark:border-indigo-500/50 shadow-sm ring-1 ring-indigo-50 dark:ring-indigo-900/20' 
+                      : isCompleted
+                        ? 'border-emerald-200 dark:border-emerald-500/30 cursor-pointer'
+                        : 'border-amber-200/80 bg-amber-50/10 dark:border-amber-500/30 dark:bg-amber-500/5 cursor-pointer' 
                 }`}
               >
                 {isExpanded ? (
-                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-2">
-                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-sm font-extrabold shrink-0 shadow-inner">
+                  <div className="flex flex-col p-4 sm:p-6 md:p-7">
+                    <div 
+                      className="flex items-center justify-between mb-5 sm:mb-6 cursor-pointer group/header"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedStageId(null);
+                      }}
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <span className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-base sm:text-lg font-extrabold shrink-0 border border-indigo-100 dark:border-indigo-500/20 transition-transform group-hover/header:scale-105">
                           {idx + 1}
                         </span>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{stage.name}</h3>
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">{block.name}</h3>
                       </div>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm pl-12 font-medium">{stage.desc}</p>
-                      {stage.tasks && stage.tasks.length > 0 && (
-                        <ul className="mt-4 space-y-2 pl-12">
-                          {stage.tasks.map((task, i) => (
-                            <li key={i} className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                              <Check className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-[2px]" />
-                              <span className="leading-snug">{task}</span>
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-slate-50 dark:bg-slate-800 group-hover/header:bg-slate-100 dark:group-hover/header:bg-slate-700 transition-colors">
+                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 rotate-180 shrink-0 transition-transform" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-5 sm:gap-6">
+                      <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-stretch">
+                        
+                        <div className="w-full md:w-1/2">
+                          <div className="relative w-full h-[180px] md:h-full min-h-[200px] rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shadow-sm transition-opacity duration-300">
+                            <Image 
+                              src={`/images/wizard/step2/${activeImage}`}
+                              alt={block.name}
+                              fill
+                              className="object-cover transition-opacity duration-300"
+                              sizes="(max-width: 768px) 100vw, 50vw"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="w-full md:w-1/2 flex flex-col justify-between pt-1">
+                          <div className="flex flex-col gap-3">
+                            
+                            {sortedOptions.map((option: any) => {
+                              const isActive = activeOption?.id === option.id;
+
+                              if (option.type === 'myself') {
+                                return (
+                                  <button
+                                    key={option.id}
+                                    onClick={(e) => { e.stopPropagation(); handleSelect(block, option); }}
+                                    className={`w-full relative flex items-center justify-between p-3.5 sm:p-4 rounded-xl border-2 transition-colors duration-200 ${
+                                      isActive
+                                        ? 'border-indigo-600 text-indigo-600 bg-white shadow-sm ring-1 ring-indigo-600 dark:bg-slate-800 dark:text-indigo-400 dark:ring-indigo-500' 
+                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Settings className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                                      <span className="font-bold text-sm sm:text-base">{option.name}</span>
+                                    </div>
+                                    <span className="text-xs sm:text-sm text-slate-500 font-medium">$0</span>
+                                  </button>
+                                );
+                              }
+
+                              if (option.type === 'hire') {
+                                return (
+                                  <div key={option.id} className="relative hire-dropdown-container">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleSelect(block, option); }}
+                                      className={`w-full relative flex items-center justify-between p-3.5 sm:p-4 rounded-xl border-2 transition-colors duration-200 ${
+                                        isActive || openHireDropdown === option.id
+                                          ? 'border-indigo-600 text-indigo-600 bg-white shadow-sm ring-1 ring-indigo-600 dark:bg-slate-800 dark:text-indigo-400 dark:ring-indigo-500' 
+                                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <User className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isActive || openHireDropdown === option.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                                        <span className="font-bold text-sm sm:text-base text-left">
+                                          {isActive
+                                            ? `${getBaseName(option.name)} (${getActiveGradeLabel(option)})`
+                                            : option.name}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        {isActive && (
+                                          <span className="text-xs sm:text-sm font-mono font-bold text-slate-500">
+                                            +${(getCartItemForOption(option)?.price || 0).toLocaleString()}/m
+                                          </span>
+                                        )}
+                                        {option.grades && option.grades.length > 0 && (
+                                          <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 transition-transform ${openHireDropdown === option.id ? 'rotate-180' : ''}`} />
+                                        )}
+                                      </div>
+                                    </button>
+
+                                    {openHireDropdown === option.id && option.grades && (
+                                      <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in duration-200">
+                                        {option.grades.map((grade: any) => {
+                                          const isSelected = getActiveGradeLabel(option) === grade.label;
+                                          return (
+                                            <button
+                                              key={grade.level}
+                                              onClick={(e) => { e.stopPropagation(); handleGradeSelect(block, option, grade); }}
+                                              className={`w-full flex items-center justify-between p-3 sm:p-4 text-left transition-colors ${
+                                                isSelected ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                                              }`}
+                                            >
+                                              <span className={`text-sm sm:text-base font-bold ${isSelected ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                {grade.label}
+                                              </span>
+                                              <div className="flex items-center gap-3">
+                                                <span className="text-xs sm:text-sm font-mono font-bold text-slate-500">${grade.price.toLocaleString()}/m</span>
+                                                {isSelected ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400" /> : <div className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                              </div>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+
+                              if (option.type === 'service') {
+                                return (
+                                  <button
+                                    key={option.id}
+                                    onClick={(e) => { e.stopPropagation(); handleSelect(block, option); }}
+                                    className={`w-full relative flex items-center justify-between p-3.5 sm:p-4 rounded-xl border-2 transition-colors duration-200 ${
+                                      isActive
+                                        ? 'border-indigo-600 text-indigo-600 bg-white shadow-sm ring-1 ring-indigo-600 dark:bg-slate-800 dark:text-indigo-400 dark:ring-indigo-500' 
+                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Zap className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                                      <span className="font-bold text-sm sm:text-base text-left leading-tight">
+                                        {option.name}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs sm:text-sm font-mono font-bold text-slate-500 shrink-0">
+                                      +${(getCartItemForOption(option)?.price || option.price || 0).toLocaleString()}/m
+                                    </span>
+                                  </button>
+                                );
+                              }
+
+                              return null;
+                            })}
+
+                          </div>
+
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAdvance(idx);
+                            }}
+                            disabled={!isCompleted}
+                            className="mt-5 sm:mt-6 w-full px-5 sm:px-6 py-3.5 sm:py-4 bg-indigo-600 text-white text-sm sm:text-base font-extrabold rounded-xl hover:bg-indigo-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                          >
+                            {idx === dbBlocks.length - 1 ? 'Finish Stage' : 'Continue'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="w-full bg-indigo-50/40 dark:bg-slate-800/50 rounded-xl p-4 md:p-6 border border-indigo-100 dark:border-slate-700 transition-colors overflow-hidden">
+                        <ul className="grid grid-cols-1 gap-2.5 sm:gap-3 break-words">
+                          {displayInfo.bullets.map((bullet: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2.5 sm:gap-3 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                              <span className="text-indigo-500 font-bold mt-[1px] sm:mt-[2px] shrink-0">•</span>
+                              <span className="break-words overflow-hidden">{bullet}</span>
                             </li>
                           ))}
                         </ul>
-                      )}
+                      </div>
+
                     </div>
-                  
-                  <div className="flex flex-col gap-2 w-full md:w-[280px] shrink-0 pl-12 md:pl-0">
-                    {/* Myself Option */}
-                    <button
-                      onClick={() => handleSelect(stage.id, 'myself')}
-                      className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 hover:-translate-x-1 ${
-                        selection === 'myself'
-                          ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm' 
-                          : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Settings className={`w-5 h-5 transition-colors ${selection === 'myself' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
-                        <span className={`font-bold text-sm transition-colors ${selection === 'myself' ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                          Do it myself
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-end w-8 h-8 relative shrink-0 group">
-                        <span className={`text-xs text-slate-500 font-medium transition-opacity absolute right-0`}>
-                          $0
-                        </span>
-                      </div>
-                    </button>
-
-                    {/* Hire Option */}
-                    {stage.hire && (
-                      <div className="relative hire-dropdown-container">
-                        <button
-                          onClick={() => handleSelect(stage.id, 'hire')}
-                          className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 hover:-translate-x-1 ${
-                            selection === 'hire'
-                              ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 dark:border-indigo-500/50 shadow-sm' 
-                              : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <User className={`w-5 h-5 transition-colors ${selection === 'hire' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
-                            <span className={`font-bold text-sm transition-colors text-left ${selection === 'hire' ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                              {selection === 'hire' 
-                                ? `${stage.hire.baseName} ${stage.hire.grades.find(g => g.level === (selectedGrades[stage.hire!.id] || stage.hire!.defaultGrade))?.label}`
-                                : `Hire ${stage.hire.baseName}`}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0 group">
-                            {selection === 'hire' && (
-                              <span className="text-xs font-mono font-semibold text-slate-500">
-                                +${stage.hire.grades.find(g => g.level === (selectedGrades[stage.hire!.id] || stage.hire!.defaultGrade))?.price.toLocaleString()}/m
-                              </span>
-                            )}
-                            <div className="relative w-6 h-6 flex items-center justify-center">
-                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-all ${openHireDropdown === stage.id ? 'rotate-180' : ''}`} />
-                            </div>
-                          </div>
-                        </button>
-
-                        {openHireDropdown === stage.id && (
-                          <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl overflow-hidden z-50 origin-top animate-in fade-in zoom-in-95 duration-200">
-                            {stage.hire.grades.map(grade => {
-                              const isSelected = (selectedGrades[stage.hire!.id] || stage.hire!.defaultGrade) === grade.level;
-                              return (
-                                <button
-                                  key={grade.level}
-                                  onClick={() => handleGradeSelect(stage.id, stage.hire!.id, grade.level)}
-                                  className={`w-full flex items-center justify-between p-3 text-left transition-colors ${
-                                    isSelected ? 'bg-indigo-50 dark:bg-indigo-500/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800'
-                                  }`}
-                                >
-                                  <span className={`text-sm font-semibold ${isSelected ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                                    {grade.label}
-                                  </span>
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-xs font-mono text-slate-500">${grade.price.toLocaleString()}/m</span>
-                                    {isSelected ? (
-                                      <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                                    ) : (
-                                      <div className="w-4 h-4" />
-                                    )}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* AI / Service Option */}
-                    {stage.service && (
-                      <button
-                        onClick={() => handleSelect(stage.id, 'service')}
-                        className={`w-full relative flex items-center justify-between p-3 rounded-xl border-2 transition-all duration-200 hover:-translate-x-1 ${
-                          selection === 'service'
-                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 dark:border-indigo-500/50 shadow-sm' 
-                            : 'border-slate-200 dark:border-slate-800/50 hover:border-indigo-200 dark:hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/80'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Zap className={`w-5 h-5 transition-colors ${selection === 'service' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
-                          <span className={`font-bold text-sm text-left leading-tight transition-colors ${selection === 'service' ? 'text-indigo-700 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'}`}>
-                            {stage.service.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-end w-16 h-8 relative shrink-0 group">
-                          <span className={`text-xs font-mono font-semibold text-slate-500 transition-opacity absolute right-0`}>
-                            +${stage.service.price.toLocaleString()}
-                          </span>
-                        </div>
-                      </button>
-                    )}
                   </div>
-                </div>
                 ) : (
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-sm font-extrabold shrink-0 shadow-inner">
-                        {idx + 1}
-                      </span>
+                  <div className="flex items-center justify-between gap-3 sm:gap-4 p-4 sm:p-5 sm:px-6">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                        isCompleted
+                          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'
+                          : 'bg-amber-100/50 dark:bg-amber-500/20 text-amber-500 dark:text-amber-400' 
+                      }`}>
+                        {isCompleted ? <CheckCircle2 className="w-5 h-5" /> : <span className="text-base font-extrabold">{idx + 1}</span>}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white truncate">{stage.name}</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-xs font-medium truncate hidden sm:block">{stage.desc}</p>
+                        <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">{block.name}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-xs font-medium truncate hidden sm:block">
+                          {block.description?.split('\n')[0] || "Select your structure"}
+                        </p>
                       </div>
                     </div>
                     
                     <div className="shrink-0 flex items-center justify-end min-w-0 max-w-[240px] md:max-w-[400px]">
-                      {!selection ? (
-                        <div className="flex items-center justify-center px-4 py-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 animate-pulse text-sm font-bold">
-                          Please choose
-                        </div>
+                      {!activeOption ? (
+                        <div className="px-4 py-2"></div>
                       ) : (
                         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                          {/* 1. Action Chevron */}
-                          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold shrink-0 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400">
-                            {selection === 'myself' && <Settings className="w-3.5 h-3.5" />}
-                            {selection === 'hire' && <User className="w-3.5 h-3.5" />}
-                            {selection === 'service' && <Zap className="w-3.5 h-3.5" />}
+                          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] sm:text-xs font-bold shrink-0 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                            {activeOption.type === 'myself' && <Settings className="w-3.5 h-3.5" />}
+                            {activeOption.type === 'hire' && <User className="w-3.5 h-3.5" />}
+                            {activeOption.type === 'service' && <Zap className="w-3.5 h-3.5" />}
                             
-                            <span className="truncate max-w-[100px] md:max-w-[150px]">
-                              {selection === 'myself' ? 'Do it myself' :
-                               selection === 'hire' ? `${stage.hire?.baseName} (${selectedGrades[stage.hire!.id] || stage.hire!.defaultGrade})` :
-                               stage.service?.name}
+                            <span className="truncate max-w-[100px] md:max-w-[150px] uppercase tracking-wide">
+                              {activeOption.type === 'myself' ? activeOption.name :
+                               activeOption.type === 'hire' ? `${getBaseName(activeOption.name)} (${getActiveGradeLabel(activeOption)})` :
+                               activeOption.name}
                             </span>
                           </div>
 
-                          {/* 2. Cost Chevron */}
-                          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-mono font-bold shrink-0">
-                            {selection === 'myself' ? '$0/m' :
-                             selection === 'hire' ? `+$${stage.hire?.grades.find(g => g.level === (selectedGrades[stage.hire!.id] || stage.hire!.defaultGrade))?.price.toLocaleString()}/m` :
-                             `+$${stage.service?.price.toLocaleString()}/m`}
+                          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] sm:text-xs font-mono font-bold shrink-0 bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                            {activeOption.type === 'myself' ? '$0/m' : `+$${(getCartItemForOption(activeOption)?.price || 0).toLocaleString()}/m`}
                           </div>
 
-                          {/* 3. Time Chevron */}
-                          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold shrink-0 bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400">
+                          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold shrink-0 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
                             <Clock className="w-3.5 h-3.5" />
                             <span>
-                              {selection === 'myself' ? `${DIY_HOURS_MAP[stage.id]}hr/m (You)` : 
-                               selection === 'hire' ? `${stage.hire?.hours}hr/m (Team)` : 
-                               `${stage.service?.hours}hr/m (AI)`}
+                              {activeOption.type === 'myself' ? `40hr/m` : `160hr/m`}
                             </span>
                           </div>
                         </div>

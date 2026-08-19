@@ -7,23 +7,36 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
-import { CreditCard, UploadCloud, CheckCircle, Clock, Search, Activity, Gauge, LayoutDashboard, CheckSquare, BarChart3, Receipt, Settings, Users, LogOut, Menu, X, Bell } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { CreditCard, UploadCloud, CheckCircle, Clock, Search, Activity, Gauge, LayoutDashboard, CheckSquare, BarChart3, Receipt, Settings, Users, LogOut, Menu, X, Bell, FileUp } from 'lucide-react';
 import { ThemeToggle } from '../../../components/ThemeToggle';
+import { useSession, signOut } from "next-auth/react"; 
 
 type Task = { id: string; orderId: string; status: string; slaDeadline: string; optionName: string; vendorName: string; deliverables: any; };
 type Order = { id: string; status: string; totalPrice: string; createdAt: string; };
 
 export default function Dashboard() {
+  const { data: session, status } = useSession(); // Достаем status из сессии
+  const router = useRouter();
+  const locale = useLocale();
+  
   const [order, setOrder] = useState<Order | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const locale = useLocale();
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
       const orderRes = await fetch('/api/dashboard/latest-order');
+      
+      // Если API говорит, что мы не авторизованы - принудительно на логин
+      if (orderRes.status === 401) {
+        router.push(`/${locale}/login`);
+        return;
+      }
+
       if (orderRes.ok) {
         const orderData = await orderRes.json();
         setOrder(orderData);
@@ -41,9 +54,14 @@ export default function Dashboard() {
     }
   };
 
+  // Эффект следит за статусом авторизации
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (status === "unauthenticated") {
+      router.push(`/${locale}/login`);
+    } else if (status === "authenticated") {
+      fetchDashboardData();
+    }
+  }, [status, locale, router]);
 
   const handlePayNow = async () => {
     if (!order) return;
@@ -67,14 +85,19 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileUrl: 'https://example.com/mock-upload.pdf' })
       });
-      fetchDashboardData();
+      alert(`Simulated upload for task ${taskId}`);
     } catch (e) {
       console.error(e);
       alert('Upload failed');
     }
   };
 
-  if (loading) {
+  // Предотвращаем мерцание экрана для неавторизованных
+  if (status === "unauthenticated") {
+    return null; 
+  }
+
+  if (status === "loading" || (status === "authenticated" && loading)) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-500 font-mono">Loading Workspace...</div>;
   }
 
@@ -85,28 +108,37 @@ export default function Dashboard() {
         <Link href={`/${locale}/wizard`} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-sm">
           Start Guided Setup
         </Link>
+        <button 
+          onClick={() => signOut({ callbackUrl: `/${locale}/login` })} 
+          className="mt-6 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+        >
+          Sign Out
+        </button>
       </div>
     );
   }
 
   const isDraft = order.status === 'DRAFT';
+  const isActive = order.status === 'ACTIVE';
 
   const actionRequiredTasks = tasks.filter(t => t.status === 'ACTION_REQUIRED' || t.status === 'DRAFT');
   const inProgressTasks = tasks.filter(t => t.status === 'PENDING' || t.status === 'IN_PROGRESS' || t.status === 'PROCESSING');
   const reviewTasks = tasks.filter(t => t.status === 'REVIEW');
   const completedTasks = tasks.filter(t => t.status === 'COMPLETED' || t.status === 'ACTIVE');
 
+  const totalTasks = tasks.length;
+  const completedCount = completedTasks.length;
+  const progressPercentage = totalTasks > 0 ? Math.round((completedCount / totalTasks) * 100) : 0;
+
   const renderTaskCard = (task: Task) => {
-    const isActionRequired = task.status === 'ACTION_REQUIRED';
     return (
-      <div key={task.id} className={`bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border ${isActionRequired ? 'border-amber-300 dark:border-amber-700/50 bg-amber-50/30 dark:bg-amber-900/10' : 'border-slate-200 dark:border-slate-700'} mb-3 transition-all group`}>
+      <div key={task.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-3 transition-all group">
         <div className="flex justify-between items-start mb-2">
           <p className="font-semibold text-sm text-slate-900 dark:text-white leading-snug pr-2">{task.optionName}</p>
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shrink-0 ${isActionRequired ? 'bg-amber-100 text-amber-700' : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'}`}>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shrink-0 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
             {task.status.replace('_', ' ')}
           </span>
         </div>
-        
         <div className="flex flex-col gap-2 mt-3">
           <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 font-medium">
             <span className="w-16">Assigned:</span>
@@ -117,18 +149,6 @@ export default function Dashboard() {
             <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {task.slaDeadline ? new Date(task.slaDeadline).toLocaleDateString() : 'Pending'}</span>
           </div>
         </div>
-
-        {isActionRequired && !isDraft && (
-          <div className="mt-4 pt-3 border-t border-amber-200 dark:border-amber-800/50">
-            <button 
-              onClick={() => handleUpload(task.id)}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-amber-300 hover:text-amber-700 dark:hover:text-amber-400 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 shadow-sm transition-all"
-            >
-              <UploadCloud className="w-4 h-4" />
-              Upload Asset
-            </button>
-          </div>
-        )}
       </div>
     );
   };
@@ -144,6 +164,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans flex flex-col md:flex-row">
+      
       <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <img src="/usc_logo_s.png" alt="USClosers Logo" className="h-6" />
@@ -168,18 +189,18 @@ export default function Dashboard() {
           <nav className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isTabActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                    isActive 
+                    isTabActive 
                       ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400' 
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                  <Icon className={`w-5 h-5 ${isTabActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`} />
                   {item.label}
                 </button>
               );
@@ -195,10 +216,21 @@ export default function Dashboard() {
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
             </button>
           </div>
-          <Link href={`/${locale}`} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors">
+          <div className="mb-3 px-3">
+            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+              {session?.user?.name || "Client"}
+            </p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+              {session?.user?.email}
+            </p>
+          </div>
+          <button 
+            onClick={() => signOut({ callbackUrl: `/${locale}/login` })} 
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+          >
             <LogOut className="w-5 h-5 text-slate-400 dark:text-slate-500" />
             Exit Portal
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -236,46 +268,93 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                      <Activity className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                {isActive ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-in fade-in">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                        <Activity className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Platform Uptime</p>
+                        <p className="text-2xl font-mono font-bold text-slate-900 dark:text-white">99.99%</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Platform Uptime</p>
-                      <p className="text-2xl font-mono font-bold text-slate-900 dark:text-white">99.99%</p>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <Gauge className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Speed to Lead</p>
+                        <p className="text-2xl font-mono font-bold text-slate-900 dark:text-white">4m 30s</p>
+                      </div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                        <Search className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Lead to SQL</p>
+                        <p className="text-2xl font-mono font-bold text-slate-900 dark:text-white">12.4%</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <Gauge className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                ) : (
+                  <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8 animate-in fade-in">
+                    <div className="flex justify-between items-end mb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <Settings className="w-5 h-5 text-indigo-500 animate-[spin_3s_linear_infinite]" /> 
+                          Setup Progress
+                        </h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Your workspace infrastructure is currently being provisioned.</p>
+                      </div>
+                      <span className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 tracking-tight">{progressPercentage}%</span>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Speed to Lead</p>
-                      <p className="text-2xl font-mono font-bold text-slate-900 dark:text-white">4m 30s</p>
+                    <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3 mb-2 overflow-hidden shadow-inner">
+                      <div 
+                        className="bg-indigo-600 h-3 rounded-full transition-all duration-1000 ease-out" 
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-xs font-medium text-slate-400 uppercase tracking-widest mt-2">
+                      <span>{completedCount} of {totalTasks} steps completed</span>
+                      <span>ETA: Dependent on SLAs</span>
                     </div>
                   </div>
-                  <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                      <Search className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Lead to SQL</p>
-                      <p className="text-2xl font-mono font-bold text-slate-900 dark:text-white">12.4%</p>
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 <div className={`grid grid-cols-1 md:grid-cols-4 gap-6 transition-opacity duration-300 ${isDraft ? 'opacity-50 pointer-events-none filter grayscale-[30%]' : ''}`}>
+                  
                   <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-4 flex flex-col max-h-[800px]">
                     <h3 className="font-bold text-slate-700 dark:text-slate-300 mb-4 flex justify-between items-center px-1">
                       Action Required
-                      <span className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 rounded-full text-xs py-0.5 font-mono">{actionRequiredTasks.length}</span>
+                      <span className="bg-amber-200/50 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 px-2 rounded-full text-xs py-0.5 font-mono">
+                        {actionRequiredTasks.length > 0 ? '1' : '0'}
+                      </span>
                     </h3>
                     <div className="overflow-y-auto pr-2 pb-4 space-y-3 flex-1 custom-scrollbar">
                       {actionRequiredTasks.length === 0 ? (
                          <div className="text-center p-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-slate-400 text-sm">No action required</div>
-                      ) : actionRequiredTasks.map(renderTaskCard)}
+                      ) : (
+                         <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-amber-300 dark:border-amber-700/50 bg-amber-50/30 dark:bg-amber-900/10 transition-all">
+                           <div className="flex justify-between items-start mb-3">
+                             <p className="font-bold text-slate-900 dark:text-white">Complete Onboarding Assets</p>
+                             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400 shrink-0">
+                               URGENT
+                             </span>
+                           </div>
+                           <p className="text-sm text-slate-600 dark:text-slate-400 mb-5 font-medium leading-relaxed">
+                             You have <span className="font-bold text-slate-900 dark:text-white">{actionRequiredTasks.length} assets</span> pending upload. Provisioning is paused until these are provided.
+                           </p>
+                           <button
+                             onClick={() => setShowUploadModal(true)}
+                             className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-all hover:-translate-y-0.5"
+                           >
+                             <FileUp className="w-4 h-4" />
+                             Open Upload Center
+                           </button>
+                         </div>
+                      )}
                     </div>
                   </div>
 
@@ -354,7 +433,7 @@ export default function Dashboard() {
                             </td>
                             <td className="p-4 text-right">
                               {task.status === 'ACTION_REQUIRED' && !isDraft ? (
-                                <button onClick={() => handleUpload(task.id)} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm font-semibold">
+                                <button onClick={() => setShowUploadModal(true)} className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 text-sm font-semibold">
                                   Upload
                                 </button>
                               ) : (
@@ -404,6 +483,52 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setShowUploadModal(false)}></div>
+          <div className="relative bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-2xl flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">Asset Upload Center</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">Upload your custom materials to unblock provisioning.</p>
+              </div>
+              <button onClick={() => setShowUploadModal(false)} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-slate-800 rounded-full transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+              {actionRequiredTasks.map(task => (
+                <div key={task.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 gap-4">
+                  <div className="flex-1">
+                    <p className="font-bold text-sm text-slate-900 dark:text-white">{task.optionName}</p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Format: PDF, DOCX, CSV or JPG.</p>
+                  </div>
+                  <button 
+                    onClick={() => handleUpload(task.id)} 
+                    className="shrink-0 flex items-center justify-center gap-2 py-2 px-4 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 shadow-sm transition-all"
+                  >
+                    <UploadCloud className="w-4 h-4" />
+                    Choose File
+                  </button>
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+              <button 
+                onClick={() => setShowUploadModal(false)} 
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-md transition-all hover:-translate-y-0.5"
+              >
+                Close & Save Progress
+              </button>
+            </div>
+            
+          </div>
+        </div>
+      )}
       
       {sidebarOpen && (
         <div 

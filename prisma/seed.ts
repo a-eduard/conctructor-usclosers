@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import "dotenv/config";
 
 const prisma = new PrismaClient();
@@ -6,65 +7,99 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Start seeding...");
 
-  // 1. Clean up existing data
-  await prisma.offer.deleteMany();
-  await prisma.category.deleteMany();
+  // --- 1. CREATE TEST USERS ---
+  const hashedPassword = await bcrypt.hash("admin123", 10);
 
-  // 2. Create Categories
-  const categoryCloud = await prisma.category.create({ data: { name: "Cloud" } });
-  const categorySalesforce = await prisma.category.create({ data: { name: "Salesforce" } });
-  const categoryService = await prisma.category.create({ data: { name: "Service" } });
-  const categorySolution = await prisma.category.create({ data: { name: "Solution" } });
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@foundry.com" },
+    update: {},
+    create: {
+      email: "admin@foundry.com",
+      name: "Foundry Admin",
+      password: hashedPassword,
+      role: "ADMIN",
+    },
+  });
+  console.log(`Created ADMIN user: ${admin.email}`);
 
-  // 3. Create Offers
-  const offersData = [
-    {
-      name: "Sales meeting room with AI agents",
-      concept: "Video conferencing room with built-in AI for meeting analysis.",
-      pain: "Inefficient meetings and lost information.",
-      action: "Deploy AI-powered meeting rooms.",
-      features: ["AI transcription", "Action item extraction", "CRM integration"],
-      basePrice: 200.00,
-      deliverySla: "1 DAY",
-      categoryId: categoryCloud.id,
+  const client = await prisma.user.upsert({
+    where: { email: "client@foundry.com" },
+    update: {},
+    create: {
+      email: "client@foundry.com",
+      name: "Test Client",
+      password: hashedPassword,
+      role: "USER",
     },
+  });
+  console.log(`Created USER client: ${client.email}`);
+
+
+  // --- 3. CREATE SOLUTIONS ---
+  const solutionData = [
     {
-      name: "Hire AI SDR",
-      concept: "Mass outreach.",
-      pain: "Low volume of outbound activities.",
-      action: "Setup AI automated outbound.",
-      features: ["Email sequencing", "Lead scraping", "Automated replies"],
-      basePrice: 0.00,
-      deliverySla: "3 DAYS",
-      categoryId: categorySalesforce.id,
-    },
-    {
-      name: "LeadGen",
-      concept: "Consistent flow of targeted inbound leads from multiple traffic channels.",
-      pain: "Empty sales pipeline.",
-      action: "Launch omnichannel lead generation.",
-      features: ["Google Ads", "LinkedIn outreach", "Landing page optimization"],
-      basePrice: 1000.00,
-      deliverySla: "7 DAYS",
-      categoryId: categoryService.id,
-    },
-    {
+      icon: "rocket",
       name: "1st Sales Call Tomorrow",
       concept: "Booking a highly targeted prospect call for as early as tomorrow.",
-      pain: "Need immediate sales opportunities.",
-      action: "Bypass standard SDR cycles.",
-      features: ["Guaranteed meeting", "Qualified prospect", "Briefing document"],
-      basePrice: 500.00,
-      deliverySla: "24 HOURS",
-      categoryId: categorySolution.id,
+      price: "$500",
+      sla: "24 HOURS",
+      color: "bg-blue-600",
+      step1Data: JSON.stringify({ acv: "$10k-$50k" }),
+      step5Data: JSON.stringify({ funnel: "Outbound" }),
+      clientProvided: JSON.stringify(["Ideal Customer Profile"]),
+      cartItems: JSON.stringify([
+        { name: "Priority Setup", price: 100, category: "Setup" }
+      ]),
     }
   ];
 
-  for (const offer of offersData) {
-    await prisma.offer.create({
-      data: offer,
-    });
+  for (const sol of solutionData) {
+    await prisma.solution.create({ data: sol });
   }
+
+  // --- 4. CREATE WIZARD STEPS ---
+  const step2 = await prisma.wizardStep.create({
+    data: {
+      stepNumber: 2,
+      title: "Sales Materials",
+      description: "Choose how you want to prepare your sales materials."
+    }
+  });
+
+  // --- 5. CREATE WIZARD BLOCKS ---
+  const pitchDeckBlock = await prisma.wizardBlock.create({
+    data: {
+      stepId: step2.id,
+      name: "Pitch Deck",
+      description: "A core presentation for your prospects.",
+      order: 1
+    }
+  });
+
+  // --- 6. CREATE WIZARD OPTIONS ---
+  await prisma.wizardOption.create({
+    data: {
+      blockId: pitchDeckBlock.id,
+      type: "myself",
+      name: "Do it myself",
+      price: 0,
+      detailsTitle: "I have my own Pitch Deck",
+      bullets: JSON.stringify(["Use existing materials", "No extra cost"]),
+    }
+  });
+
+  await prisma.wizardOption.create({
+    data: {
+      blockId: pitchDeckBlock.id,
+      type: "service",
+      name: "Buy as a service",
+      price: 500,
+      sla: "3 Days",
+      category: "Service",
+      detailsTitle: "Let us build a converting Pitch Deck",
+      bullets: JSON.stringify(["Professional design", "Copywriting included", "2 revisions"]),
+    }
+  });
 
   console.log("Seeding finished successfully!");
 }

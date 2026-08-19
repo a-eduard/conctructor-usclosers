@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { WizardProvider } from "../../../contexts/WizardContext";
 
 export default function WizardLayout({
   children,
@@ -9,8 +8,8 @@ export default function WizardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <WizardProvider>
+    <>
       {children}
-    </WizardProvider>
+    </>
   );
 }
