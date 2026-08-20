@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -28,22 +27,25 @@ export function Header({
         isSticky ? "sticky top-0 z-50" : "relative z-50"
       } ${className}`}
     >
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
         
         {/* Left Side: Logo + Page Specific Content */}
-        <div className="flex items-center gap-6 md:gap-10">
-          <Link href={`/${locale}`}>
+        <div className="flex items-center gap-6 md:gap-10 min-w-0 flex-1">
+          {/* Added shrink-0 here so the wrapper never gets compressed */}
+          <Link href={`/${locale}`} className="shrink-0 block">
             <img
-              src="/usc_logo_s.png"
+              src="/usc_logo.png?v=2"
               alt="USClosers Logo"
-              className="h-8 hover:opacity-80 transition-opacity cursor-pointer shrink-0"
+              className="h-10 w-auto object-contain hover:opacity-80 transition-opacity cursor-pointer"
             />
           </Link>
-          {leftContent}
+          <div className="min-w-0">
+            {leftContent}
+          </div>
         </div>
         
         {/* Right Side: Page Specific Content + Controls */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 shrink-0">
           {rightContent}
           <div className="hidden md:block w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
           <ThemeToggle />

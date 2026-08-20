@@ -148,7 +148,7 @@ type WizardContextType = {
 };
 
 const initialState: WizardState = {
-  currentStep: 0, 
+  currentStep: 1, 
   clientProvided: [],
   cartItems: [],
   totalOneTime: 0,
@@ -299,7 +299,7 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
       const previous = prev.currentStep === 6 ? 4 : prev.currentStep - 1;
       return {
         ...prev,
-        currentStep: Math.max(previous, 0),
+        currentStep: Math.max(previous, 1), // Изменено с 0 на 1
       };
     });
   };
@@ -307,7 +307,7 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
   const setStep = (step: number) => {
     setState((prev) => ({
       ...prev,
-      currentStep: Math.max(0, Math.min(step, 8)),
+      currentStep: Math.max(1, Math.min(step, 8)), // Изменено с 0 на 1
     }));
   };
 
@@ -480,7 +480,7 @@ export const WizardProvider = ({ children }: { children: ReactNode }) => {
   const resetWizard = () => {
     setState({
       ...initialState,
-      currentStep: 0 
+      currentStep: 1 // Изменено с 0 на 1
     });
     
     router.replace(pathname);

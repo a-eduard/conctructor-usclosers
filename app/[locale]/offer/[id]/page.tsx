@@ -11,7 +11,8 @@ import {
   ArrowLeft, Check, AlertCircle, ShoppingCart, Zap, Users, Info, X, ShieldAlert,
 } from "lucide-react";
 import { animate, motion, AnimatePresence } from "motion/react";
-import { SetupWizardHeader } from "../../../../components/SetupWizardHeader";
+import { useLocale } from "next-intl";
+import { Header } from "../../../../components/Header";
 
 function EducationalTooltip({ content }: { content: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -128,6 +129,7 @@ function AnimatedPrice({ value }: { value: number }) {
 export default function Configurator() {
   const params = useParams();
   const id = params.id as string;
+  const locale = useLocale();
   
   const [offer, setOffer] = useState<OfferDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -370,7 +372,26 @@ export default function Configurator() {
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-slate-50 text-slate-900 font-sans overflow-hidden">
-      <SetupWizardHeader showBackButton={true} />
+      <Header 
+        isSticky={true}
+        leftContent={
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block w-px h-6 bg-slate-200 dark:bg-slate-700" />
+            <span className="font-semibold text-slate-600 dark:text-slate-300 text-sm">
+              Configure Solution
+            </span>
+          </div>
+        }
+        rightContent={
+          <Link
+            href={`/${locale}`}
+            className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors mr-2"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Storefront
+          </Link>
+        }
+      />
 
       <div className="flex flex-1 flex-col lg:flex-row h-[calc(100vh-4rem)]">
         <div className="w-full lg:w-3/5 p-8 flex flex-col overflow-y-auto border-r border-slate-200 pb-24 lg:pb-8">
