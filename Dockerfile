@@ -2,10 +2,14 @@ FROM node:20-bookworm-slim AS base
 
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 FROM base AS deps
 
 COPY package.json package-lock.json ./
+COPY prisma ./prisma
 RUN npm ci
 
 FROM base AS builder
@@ -27,7 +31,7 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma
 CMD ["./node_modules/.bin/prisma", "db", "push", "--skip-generate"]
 
-FROM node:20-bookworm-slim AS runner
+FROM base AS runner
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
