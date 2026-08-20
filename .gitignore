@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# testing
+coverage/
+
+# next.js
+.next/
+out/
+build/
+
+# env files (NEVER commit these)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Heavy media (если ты хочешь игнорировать папку public или её часть)
+public/
+# или лучше так, чтобы оставить системные иконки: public/uploads/
