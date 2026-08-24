@@ -38,6 +38,7 @@ async function main() {
   // --- 3. CREATE SOLUTIONS ---
   const solutionData = [
     {
+      slug: "first-sales-call-tomorrow", // Added missing slug field
       icon: "rocket",
       name: "1st Sales Call Tomorrow",
       concept: "Booking a highly targeted prospect call for as early as tomorrow.",

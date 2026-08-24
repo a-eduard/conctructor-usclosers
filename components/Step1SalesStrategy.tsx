@@ -42,11 +42,25 @@ const RENAME_MAP: Record<string, string> = {
   'Recurring Model (SaaS)': 'Recurring'
 };
 
+const BLOCK_DEFAULT_IMAGES: Record<string, string> = {
+  'Sales Methodology': 'methodology.png',
+  'Primary Channels': 'channels.png',
+  'Pricing Strategy': 'pricing.png',
+  'Competitor Intelligence': 'competitors.png',
+  'Partnerships': 'partnerships.png',
+};
+
 const getDisplayName = (name: string) => {
   if (name.includes('Partner MoU')) {
     return 'Order a partner network development service';
   }
   return RENAME_MAP[name] || name;
+};
+
+// Helper to format S3 URL
+const getS3Url = (path: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
 export function Step1SalesStrategy({ dbSteps, isSummaryMode = false }: { dbSteps?: any[], isSummaryMode?: boolean }) {
@@ -179,8 +193,9 @@ export function Step1SalesStrategy({ dbSteps, isSummaryMode = false }: { dbSteps
   };
 
   const getActiveImage = (block: any) => {
+    const defaultImage = BLOCK_DEFAULT_IMAGES[block.name] || block.imageUrl || 'methodology.png';
     const activeOptions = block.options.filter((opt: any) => isOptionActive(opt, block.name));
-    if (activeOptions.length === 0) return block.imageUrl || 'methodology.png';
+    if (activeOptions.length === 0) return defaultImage;
 
     for (let i = activeOptionHistory.length - 1; i >= 0; i--) {
       const id = activeOptionHistory[i];
@@ -189,7 +204,7 @@ export function Step1SalesStrategy({ dbSteps, isSummaryMode = false }: { dbSteps
     }
 
     const activeOptionWithImage = activeOptions.find((opt: any) => opt.imageUrl);
-    return activeOptionWithImage ? activeOptionWithImage.imageUrl : block.imageUrl || 'methodology.png'; 
+    return activeOptionWithImage ? activeOptionWithImage.imageUrl : defaultImage; 
   };
 
   const getActiveDetails = (block: any) => {
@@ -444,7 +459,6 @@ export function Step1SalesStrategy({ dbSteps, isSummaryMode = false }: { dbSteps
         <button 
           onClick={() => {
             setViewMode('content');
-            // Убрали window.scrollTo чтобы избежать скачков
           }}
           className="w-full sm:w-auto px-6 sm:px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-base sm:text-lg rounded-xl transition-all shadow-md hover:shadow-xl flex items-center justify-center gap-3"
         >
@@ -566,7 +580,7 @@ export function Step1SalesStrategy({ dbSteps, isSummaryMode = false }: { dbSteps
                     <div className="w-full md:w-1/2">
                       <div className="relative w-full h-[180px] md:h-full min-h-[200px] rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shadow-sm">
                         <Image 
-                          src={`/images/wizard/step1/${activeImage}`}
+                          src={getS3Url(`/images/wizard/step1/${activeImage}`)}
                           alt={block.name}
                           fill
                           className="object-cover transition-opacity duration-300"

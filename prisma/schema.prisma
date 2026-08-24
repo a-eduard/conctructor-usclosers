@@ -336,6 +336,7 @@ model WizardOption {
 
 model Solution {
   id             String   @id @default(uuid())
+  slug           String   @unique
   icon           String
   name           String
   concept        String   @db.Text

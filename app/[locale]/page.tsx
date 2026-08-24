@@ -4,8 +4,9 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import { Header } from "../../components/Header";
-import { Target, ArrowRight, ShieldCheck } from "lucide-react";
+import { Target, ArrowRight } from "lucide-react";
 import { useWizard } from "../../contexts/WizardContext";
+import Image from "next/image";
 
 type Offer = {
   id: string;
@@ -18,6 +19,7 @@ type Offer = {
 
 type Solution = {
   id: string;
+  slug: string;
   icon: string;
   name: string;
   concept: string;
@@ -41,7 +43,6 @@ export default function App() {
   
   const locale = useLocale();
   const router = useRouter();
-  const { applyDynamicSolution } = useWizard();
 
   useEffect(() => {
     Promise.all([
@@ -62,8 +63,7 @@ export default function App() {
     setLaunchingId(solution.id);
     
     setTimeout(() => {
-      applyDynamicSolution(solution);
-      router.push(`/${locale}/wizard`);
+      router.push(`/${locale}/solutions/${solution.slug}`);
     }, 50);
   };
 
@@ -78,6 +78,12 @@ export default function App() {
     new Set(offers.map((o) => o.category?.name).filter(Boolean)),
   ) as string[];
   categories.sort();
+
+  // Helper to format S3 URL
+  const getS3Url = (path: string) => {
+    const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+    return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-slate-50 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-500/30">
@@ -110,12 +116,18 @@ export default function App() {
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4 sm:mb-6 leading-tight">
             B2B Sales Architecture
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg md:text-xl font-medium leading-relaxed px-2 sm:px-0">
+          <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg md:text-xl font-medium leading-relaxed px-2 sm:px-0 mb-8">
             Buy predictable outcomes, not hours. Choose a turnkey solution below or build your own custom sales engine step by step.
           </p>
+          
+          <button 
+            onClick={() => router.push(`/${locale}/wizard`)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-8 rounded-xl shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 flex items-center gap-2"
+          >
+            Build Custom Engine <ArrowRight className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* DYNAMIC TURNKEY SOLUTIONS SECTION */}
         {activeCategory === null && (
           <section className="mb-16 sm:mb-20 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 md:gap-8">
@@ -127,15 +139,25 @@ export default function App() {
                 >
                   <div className="relative bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-[24px] sm:rounded-[32px] p-6 sm:p-8 h-full shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none transition-all duration-500 flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 hover:-translate-y-1 sm:hover:-translate-y-2 hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:border-indigo-200 dark:hover:border-indigo-500/30">
                     
-                    {/* Decorative gradient blob */}
                     <div className={`absolute -top-24 -right-24 w-48 h-48 bg-gradient-to-br ${solution.color || 'from-indigo-500 to-purple-600'} opacity-10 blur-3xl rounded-full pointer-events-none transition-opacity group-hover:opacity-30 duration-500`}></div>
                     
                     <div className="flex justify-between items-start mb-5 sm:mb-6 relative z-10">
-                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${solution.color || 'from-indigo-500 to-purple-600'} flex items-center justify-center text-white shadow-inner overflow-hidden ring-4 ring-white dark:ring-slate-900 shrink-0`}>
+                      {/* Убрали жесткий фон для контейнера с картинкой и изменили object-cover на object-contain */}
+                      <div className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden ring-4 ring-white dark:ring-slate-900 ${
+                        solution.imageUrl 
+                          ? 'bg-transparent' 
+                          : `text-white shadow-inner bg-gradient-to-br ${solution.color || 'from-indigo-500 to-purple-600'}`
+                      }`}>
                         {solution.imageUrl ? (
-                          <img src={solution.imageUrl} alt={solution.name} className="w-full h-full object-cover" />
+                          <Image 
+                            src={getS3Url(solution.imageUrl)} 
+                            alt={solution.name} 
+                            fill
+                            sizes="(max-width: 768px) 48px, 56px"
+                            className="object-contain" 
+                          />
                         ) : (
-                          <Target className="w-6 h-6" />
+                          <Target className="w-6 h-6 relative z-10" />
                         )}
                       </div>
                       <span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold text-[10px] uppercase tracking-widest px-2.5 sm:px-3 py-1.5 rounded-xl border border-emerald-100 dark:border-emerald-500/20 shadow-sm shrink-0 whitespace-nowrap ml-3">
@@ -165,7 +187,7 @@ export default function App() {
                           <span className="animate-pulse">...</span>
                         ) : (
                           <>
-                            Launch <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            View Details <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </>
                         )}
                       </span>
@@ -190,7 +212,6 @@ export default function App() {
         )}
       </main>
 
-      {/* FOOTER */}
       <footer className="w-full bg-white dark:bg-[#0B0F19] border-t border-slate-200 dark:border-slate-800/60 mt-auto relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-8 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 text-xs font-semibold text-slate-400 dark:text-slate-500 text-center md:text-left">
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 mb-2 md:mb-0">

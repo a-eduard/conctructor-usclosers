@@ -12,6 +12,12 @@ import { CreditCard, UploadCloud, CheckCircle, Clock, Search, Activity, Gauge, L
 import { ThemeToggle } from '../../../components/ThemeToggle';
 import { useSession, signOut } from "next-auth/react"; 
 
+// Helper to format S3 URL
+const getS3Url = (path: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 type Task = { id: string; orderId: string; status: string; slaDeadline: string; optionName: string; vendorName: string; deliverables: any; };
 type Order = { id: string; status: string; totalPrice: string; createdAt: string; };
 
@@ -167,7 +173,7 @@ export default function Dashboard() {
       
       <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex justify-between items-center sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <img src="/usc_logo.png" alt="USClosers Logo" className="h-8 w-auto object-contain" />
+          <img src={getS3Url("/usc_logo.png")} alt="USClosers Logo" className="h-8 w-auto object-contain" />
           <span className="font-extrabold tracking-widest text-slate-500 uppercase text-sm">Client Portal</span>
         </div>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 p-2">
@@ -181,7 +187,7 @@ export default function Dashboard() {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="p-6 hidden md:flex items-center gap-3 mb-4">
-          <img src="/usc_logo.png" alt="USClosers Logo" className="h-8 w-auto object-contain" />
+          <img src={getS3Url("/usc_logo.png")} alt="USClosers Logo" className="h-8 w-auto object-contain" />
         </div>
         
         <div className="px-4 py-2">
