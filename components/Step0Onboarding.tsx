@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useWizard } from '../contexts/WizardContext';
 import * as LucideIcons from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
+import Image from "next/image";
 
 const SEGMENTS = ['Startups', 'SMB', 'Enterprise'] as const;
 type Segment = typeof SEGMENTS[number];
@@ -52,6 +53,12 @@ export function Step0Onboarding({ dbPresets = [] }: { dbPresets?: any[] }) {
     if (carouselRef.current) {
       carouselRef.current.scrollBy({ left: 400, behavior: 'smooth' });
     }
+  };
+
+  // Helper to format S3 URL
+  const getS3Url = (path: string) => {
+    const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+    return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
   };
 
   return (
@@ -115,10 +122,12 @@ export function Step0Onboarding({ dbPresets = [] }: { dbPresets?: any[] }) {
                 <div className="absolute inset-0 z-0">
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/70 to-transparent z-10" />
                   {template.imageUrl && (
-                    <img 
-                      src={template.imageUrl} 
+                    <Image 
+                      src={getS3Url(template.imageUrl)} 
                       alt={template.name}
-                      className="w-full h-full object-cover object-center group-hover/card:scale-105 transition-transform duration-700"
+                      fill
+                      sizes="(max-width: 768px) 85vw, 400px"
+                      className="object-cover object-center group-hover/card:scale-105 transition-transform duration-700"
                     />
                   )}
                 </div>

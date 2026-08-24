@@ -26,6 +26,12 @@ const normalizeSharedResource = (name: string) => {
   return lower.replace(/^(buy |hire )/i, '').split('(')[0].trim();
 };
 
+// Helper to format S3 URL
+const getS3Url = (path: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 export function Step2TeamStructure({ dbSteps, isSummaryMode = false }: { dbSteps?: any[], isSummaryMode?: boolean }) {
   const { state, nextStep, markClientProvided, addCartItem, removeCartItem, removeClientProvided } = useWizard();
   
@@ -470,7 +476,7 @@ export function Step2TeamStructure({ dbSteps, isSummaryMode = false }: { dbSteps
                         <div className="w-full md:w-1/2">
                           <div className="relative w-full h-[180px] md:h-full min-h-[200px] rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shadow-sm transition-opacity duration-300">
                             <Image 
-                              src={`/images/wizard/step2/${activeImage}`}
+                              src={getS3Url(`/images/wizard/step2/${activeImage}`)}
                               alt={block.name}
                               fill
                               className="object-cover transition-opacity duration-300"

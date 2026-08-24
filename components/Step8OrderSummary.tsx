@@ -16,10 +16,15 @@ import { Step1SalesStrategy } from "./Step1SalesStrategy";
 import { Step2TeamStructure } from "./Step2TeamStructure";
 import { Step3SalesMaterials } from "./Step3SalesMaterials";
 import { Step4LegalFramework } from "./Step4LegalFramework";
-// Step 5 (Pipeline Funnels) is temporarily excluded
 import { Step6DataScraping } from "./Step6DataScraping";
 import { Step7Infrastructure } from "./Step7Infrastructure";
 import { useLocale } from "next-intl";
+
+// Helper to format S3 URL
+const getS3Url = (path: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
 
 function SummaryAccordion({ 
   title, 
@@ -192,7 +197,7 @@ export function Step8OrderSummary({ dbSteps = [] }: { dbSteps?: any[] }) {
       <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-500 max-w-2xl mx-auto px-4">
         <div className="relative w-full aspect-[4/3] rounded-[32px] overflow-hidden bg-emerald-50 dark:bg-emerald-900/10 mb-8 border border-emerald-100 dark:border-emerald-500/20 shadow-inner">
           <Image 
-            src="/images/wizard/step8/checkout-success.png" 
+            src={getS3Url("/images/wizard/step8/checkout-success.png")} 
             alt="Success" 
             fill 
             className="object-cover"

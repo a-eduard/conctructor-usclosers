@@ -6,12 +6,14 @@ import { AuthProvider } from "../../components/AuthProvider";
 import { WizardProvider } from "../../contexts/WizardContext";
 import "../globals.css";
 
+const s3BaseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+
 export const metadata: Metadata = {
   title: "USClosers | B2B Sales Architecture",
   description: "Buy predictable outcomes, not hours. Choose a turnkey solution or build your own custom sales engine.",
   icons: {
-    icon: "/usc_logo_s.png",
-    apple: "/usc_logo_s.png",
+    icon: `${s3BaseUrl}/usc_logo_s.png`,
+    apple: `${s3BaseUrl}/usc_logo_s.png`,
   },
 };
 

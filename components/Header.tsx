@@ -6,6 +6,12 @@ import { useLocale } from "next-intl";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
+// Helper to format S3 URL
+const getS3Url = (path: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 interface HeaderProps {
   leftContent?: React.ReactNode;
   rightContent?: React.ReactNode;
@@ -34,7 +40,7 @@ export function Header({
           {/* Added shrink-0 here so the wrapper never gets compressed */}
           <Link href={`/${locale}`} className="shrink-0 block">
             <img
-              src="/usc_logo.png?v=2"
+              src={getS3Url("/usc_logo.png?v=2")}
               alt="USClosers Logo"
               className="h-10 w-auto object-contain hover:opacity-80 transition-opacity cursor-pointer"
             />

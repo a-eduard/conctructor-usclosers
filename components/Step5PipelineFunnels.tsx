@@ -21,6 +21,12 @@ import {
   Filter
 } from "lucide-react";
 
+// Helper to format S3 URL
+const getS3Url = (path: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL || "";
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
 function BotIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -419,7 +425,7 @@ export function Step5PipelineFunnels({ dbSteps, isSummaryMode = false }: { dbSte
                   <div className="w-full md:w-1/2">
                     <div className="relative w-full h-[180px] md:h-full min-h-[200px] rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shadow-sm transition-opacity duration-300">
                       <Image 
-                        src={`/images/wizard/step5/${getImageSrc()}`}
+                        src={getS3Url(`/images/wizard/step5/${getImageSrc()}`)}
                         alt={configBlock.name}
                         fill
                         className="object-cover transition-opacity duration-300"

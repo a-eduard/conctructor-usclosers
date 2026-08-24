@@ -10,8 +10,11 @@ export async function POST(req: NextRequest) {
       data: body,
     });
     return NextResponse.json(newSolution);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating solution:", error);
+    if (error.code === 'P2002') {
+      return NextResponse.json({ error: "A solution with this slug already exists" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Failed to create solution" }, { status: 500 });
   }
 }
@@ -28,8 +31,11 @@ export async function PUT(req: NextRequest) {
       data,
     });
     return NextResponse.json(updatedSolution);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating solution:", error);
+    if (error.code === 'P2002') {
+      return NextResponse.json({ error: "A solution with this slug already exists" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Failed to update solution" }, { status: 500 });
   }
 }
