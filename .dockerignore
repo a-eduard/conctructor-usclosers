@@ -1,0 +1,12 @@
+.git
+.gitignore
+.next
+node_modules
+npm-debug.log*
+.env*
+!.env.docker.example
+coverage
+*.db
+*.rar
+public/images/
+public/solutions/

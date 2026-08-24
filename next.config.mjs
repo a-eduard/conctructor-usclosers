@@ -1,17 +1,12 @@
+import createNextIntlPlugin from 'next-intl/plugin';
+
+// Pointing the plugin to our custom i18n file location
+const withNextIntl = createNextIntlPlugin('./i18n.ts');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'i.pravatar.cc',
-      }
-    ],
-  },
+  reactStrictMode: true,
+  output: 'standalone',
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

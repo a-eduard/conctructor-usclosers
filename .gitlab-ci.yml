@@ -1,0 +1,56 @@
+stages:
+  - validate
+  - deploy
+
+default:
+  interruptible: true
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+
+validate:
+  stage: validate
+  image: node:20-bookworm-slim
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  variables:
+    NEXT_TELEMETRY_DISABLED: "1"
+    DATABASE_URL: "mysql://ci:ci@127.0.0.1:3306/ci"
+    NEXTAUTH_SECRET: "ci-placeholder-secret"
+    NEXTAUTH_URL: "http://localhost:3000"
+  before_script:
+    - apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run build -- --webpack
+
+deploy_production:
+  stage: deploy
+  image: docker:28-cli
+  resource_group: production
+  environment:
+    name: production
+    url: https://order.usclosers.com
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+      allow_failure: false
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: manual
+      allow_failure: false
+    - when: never
+  before_script:
+    - apk add --no-cache bash curl rsync
+  script:
+    - bash scripts/ci-deploy-production.sh
