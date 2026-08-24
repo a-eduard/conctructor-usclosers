@@ -6,7 +6,7 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'standalone',
+  // Removed output: 'standalone' because Vercel uses its own serverless output tracing
   images: {
     remotePatterns: [
       {
