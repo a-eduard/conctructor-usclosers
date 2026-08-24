@@ -6,7 +6,7 @@ const withNextIntl = createNextIntlPlugin('./i18n.ts');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Removed output: 'standalone' because Vercel uses its own serverless output tracing
+  outputFileTracing: false, // <-- Вот эта строка отключит багованную трассировку на Vercel
   images: {
     remotePatterns: [
       {
